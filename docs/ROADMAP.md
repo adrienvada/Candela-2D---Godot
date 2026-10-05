@@ -31081,8 +31081,10 @@ lancer Godot 4.7.1 dans le cloud (headless à `--fixed-fps 60`, Xvfb + llvmpipe)
 - Build : 31,75 Mo d'images sans lecteur dans le PCK ; chaque mise à jour laisse 131 à 185 Mo d'archive sur le disque.
 
 **État.** Rien n'est corrigé. Le rapport propose huit lots (§ 3) et sept décisions à Adrien (§ 2), dont la machine
-minimale (H13) et un argument de performance pour Q81 du chantier OMBRES (le brouillage reste allumé au repos dès que la
-torche brûle). Le lot 1 — des gestes d'une ligne, au gain mesuré ou sûr — ne demande aucune décision.
+minimale (H13) et un argument de performance pour la Q89 du chantier OMBRES : Q81, tranchée le 2026-10-05 et livrée par OM1
+(PR #8), ne couvre que le corps ; l'appareil du brouillage (flou, copie d'écran, halo) reste allumé au repos dès que la
+torche brûle. Son plancher, s'il est retenu, va dans `BrouillageVue.maj`, jamais dans `Brouillage._dose` (il y doublerait
+celui d'OM1). Le lot 1 — des gestes d'une ligne, au gain mesuré ou sûr — ne demande aucune décision.
 
 **Recoupe le chantier OMBRES** : les capteurs, les halos sans récepteur, la lumière de coup et les murs par contours sont
 à son lot OM6 ; l'audit n'y touche pas et lui transmet des faits (§ 7 du rapport). Fichiers que les deux visent :

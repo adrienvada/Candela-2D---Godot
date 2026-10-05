@@ -73,9 +73,9 @@
 | # | Question | Pourquoi maintenant | Avis de l'audit |
 |---|---|---|---|
 | **D1** | **La machine minimale (jalon H13)** | La feuille de route le demande « avant toute optimisation » : la cible « 1 % bas ≥ 60 » ne décrit que le M3. Les grandes salles du solo dépassent déjà la cible en CPU seul sur un Xeon de serveur. Et la lightmap iso ne descend jamais sous 1920×1080 : à 1280×720, l'ajuster à la fenêtre retirerait **55,6 % des pixels 2D** (ISO-01, PROUVÉ ; temps jamais mesuré), sans toucher à l'équité (masques, champ, éblouissement lus hors de sa taille ; seuls les contours de seuil bougent d'un demi-texel au plus) — mais le défaut, le réglage enregistré et le plancher de netteté sont à Adrien (`settings_manager.gd:214-217` : « ce n'est pas une décision d'agent ») | Nommer une machine (même approximative : « un portable Intel de 2019 à iGPU ») ; tout le plan s'ordonne autrement selon qu'elle est lente en CPU ou en GPU, et la taille de la lightmap en découle |
-| **D2** | **Q81 du chantier OMBRES a un argument de performance** | Au repos, la propre torche éblouit son porteur de 0,06 ; ×2 de gain, cela dépasse le seuil du brouillage, dont le flou, la copie d'écran et le halo restent donc **allumés à chaque image** dès que la torche brûle (LUM-01). **PROUVÉ sans GPU par l'agent de mesure** : torche allumée au repos, l'arbre porte en permanence un `BackBufferCopy` et un nœud qui relit l'écran ; un plancher posé dans `Brouillage._dose` les retire et ramène l'état « torche allumée » à celui d'une torche éteinte. Coût ESTIMÉ 0,1-0,4 ms sur GPU à tuiles (une copie d'écran coupe la passe) | Oui au plancher, posé dans `_dose`. Le voile plein écran, lui, lit une autre variable (`dazzle_amount`, `ui.gd:2536`) : ne plus le dessiner au repos retire 13 à 16 % du temps d'image sous llvmpipe (MESURÉ, rapport ; bien moins sur le GPU du Mac, ESTIMÉ 0,05-0,7 ms), mais ferait passer un noir de 2-4/255 à 0 — décision d'image distincte |
+| **D2** | **L'appareil du brouillage au repos — la Q89 du chantier OMBRES a un argument de performance** | Au repos, la propre torche éblouit son porteur de 0,06 ; ×2 de gain, cela dépasse le seuil du brouillage, dont le flou, la copie d'écran et le halo restent donc **allumés à chaque image** dès que la torche brûle (LUM-01). **PROUVÉ sans GPU par l'agent de mesure** : torche allumée au repos, l'arbre porte en permanence un `BackBufferCopy` et un nœud qui relit l'écran ; un plancher les retire et ramène l'état « torche allumée » à celui d'une torche éteinte. Coût ESTIMÉ 0,1-0,4 ms sur GPU à tuiles (une copie d'écran coupe la passe). **Depuis** : Adrien a tranché Q81 (« Oui », 2026-10-05) et OM1 l'a livrée pour le **corps** seul (`Brouillage.opacite_vue`, PR #8, à fusionner) ; l'appareil reste allumé au repos — c'est la Q89 qu'OMBRES a posée à Adrien | Oui pour l'appareil, avec le plancher posé dans **`BrouillageVue.maj`** (la variante A1, celle qui a été mesurée) — **surtout pas dans `Brouillage._dose`**, où il doublerait celui qu'OM1 retire déjà pour le corps (0,12 au lieu de 0,06 ; `test_ombres_regles` le garde). Le voile plein écran, lui, lit `dazzle_amount` (`ui.gd:2536`) : ne plus le dessiner au repos retire 13 à 16 % du temps d'image sous llvmpipe (MESURÉ, rapport ; bien moins sur le GPU du Mac, ESTIMÉ 0,05-0,7 ms), mais ferait passer un noir de 2-4/255 à 0 — décision d'image, elle aussi dans Q89 |
 | **D3** | **Six classes sur dix rechargent et claquent à vide sans aucun son ni liseré** (AUD-07, PROUVÉ) | Équité d'information : pistolet, fusil, pompe et arbalète s'entendent et se voient au bord de l'écran adverse ; les six autres non. Leurs tirs, eux, ont le son générique. Aucune suite ne le garde | Fournir les sons, ou à défaut un repli générique pour la recharge et le clic à vide |
-| **D4** | **Chez le client, le flou et le halo de repos du brouillage se poseraient sur l'adversaire** (V8, « D2 ») | `source_eblouissante` n'est écrite que chez l'hôte (`game_state.gd:2406`) et n'est pas répliquée. Lu dans le code, **jamais vu à l'image** | Faire vérifier à l'image (deux instances dans le cloud) avant toute décision ; c'est une question d'équité hôte/client |
+| **D4** | ~~**Chez le client, le flou et le halo de repos du brouillage se poseraient sur l'adversaire**~~ (V8, « D2 ») — **RÉGLÉ par OM1** (PR #8, commit `e2e1759`, à fusionner) | Sur `52a29c1`, `source_eblouissante` n'était écrite que chez l'hôte (`game_state.gd:2406`). OM1 fait calculer au client la source de l'éblouissement de son propre joueur (`Player.retenir_la_source`, rien de neuf sur le fil) ; gardé par `test_ombres_regles` (aucune partie en ligne jouée) | Plus rien à décider |
 | **D5** | **Les cartes trop grandes pour EOS** (RES-01) | Les six cartes livrées passent (≤ 644 caractères) ; une carte de joueur 48×48 à dix pièces (1 124) ne part jamais chez le client, au premier départ comme en revanche ou au tirage classé | À court terme, une garde (refuser à l'éditeur ou à l'appariement ce qui ne passe pas) ; à terme, découper l'envoi — nouvelle forme de RPC, donc `Protocol.VERSION` 20 et une mineure |
 | **D6** | **Corriger l'ordre de pompage EOS** (RES-02) | −23 à −29 ms de RTT à 60 i/s (ESTIMÉ, borne −33) ; −4 à −10 à 144 i/s. Le correctif tient en un sondage manuel en fin de `_process`, mais la compensation de tir se recale | Oui, avec un essai à deux machines (jalon H1) avant publication |
 | **D7** | **Ordre des lots du § 3**, et lesquels confier à quelle session | Les lots 1, 2, 3 et 5 ne demandent aucune décision ; le lot 7 touche des fichiers du chantier OMBRES | Commencer par le lot 1 (gestes d'une ligne, gain mesuré ou sûr) |
@@ -186,7 +186,8 @@ se verraient à l'écran : c'est à Adrien d'en juger, planche à l'appui.
   duel. Dans `_accorder_rendu_aux_vues`, rappelé après `show_main_menu`, les deux vues rallumées dans la même image au
   retour en jeu — à coordonner avec la session OMBRES. Les 4 % encore visibles derrière le rideau deviendraient une image
   figée : à montrer à Adrien.
-- **Le plancher de Q81** (D2) éteint le brouillage au repos (LUM-01).
+- **Le plancher de l'appareil du brouillage** (D2, Q89 d'OMBRES), dans `BrouillageVue.maj` : il retire la copie d'écran
+  permanente du repos (LUM-01).
 
 ### Lot 8 — Le solo (mesure d'abord)
 
@@ -329,7 +330,7 @@ build exporté **n'est pas mesuré** ici (seulement celui du projet lancé depui
 | Carte EOS > ~1 100 caractères : départ silencieusement perdu chez le client | MAJEUR | RES-01 ; V6 |
 | Code de carte piégé : 12 Ko → 134 M de cases, démarrage figé 1-2 min ; la carte voyage aussi par valeur dans `rpc_start_round` | MAJEUR | CAR-07 ; V5 (`v5_work/bombe_codec.py`) |
 | Six classes muettes à la recharge et au clic à vide (ni son, ni liseré) | MINEUR côté code, question d'équité | AUD-07 ; V5 |
-| Brouillage de repos ancré sur l'adversaire chez le client (lu, non vu) | à vérifier | V8 « D2 » |
+| Brouillage de repos ancré sur l'adversaire chez le client (lu, non vu) | réglé par OM1 (PR #8, à fusionner) | V8 « D2 » |
 | `hp` doublement répliqué ; témoin de protocole incomplet | MINEUR | RES-05, RES-04 ; V6 |
 | Miniature de carte jamais invalidée après l'éditeur (vignette périmée) | MINEUR, non vérifié | CAR-08 |
 | `bench_framerate --menus` : identifiants d'écran peut-être périmés (le banc retombe sur `hub.reset()`) | MINEUR (outil), non vérifié | MEN-09 |
@@ -369,6 +370,12 @@ ISO-06), halos sans récepteur (LUM-09), ombre de la lumière de coup (LUM-10), 
   que par les 240 lumières du pool de particules ;
 - Q85 : la carte d'ombre est une bande de 2 lignes par lampe et par quart de tour ; un atlas 4096 coûte de la mémoire plus
   que du temps de passe.
+
+**Depuis l'envoi de ces faits** (réponse de la session OMBRES, 2026-10-05, vérifiée sur sa branche) : OM1 est livré (PR #8,
+commit `e2e1759`). Il règle D4 (le client connaît la source de son éblouissement) et applique Q81 au **corps** seul : un
+plancher de 0,06 soustrait dans `Brouillage.opacite_vue`, rien dans `_dose` ni dans `brouillage_vue.gd`. D'où l'avis de D2 :
+le plancher de l'appareil, s'il est retenu (Q89), va dans `BrouillageVue.maj`, jamais dans `_dose`. OMBRES a signalé à
+Adrien le rognage des cookies de torche (LUM-04) comme constat de l'audit ; les autres faits sont notés pour OM6.
 
 **Fichiers que l'audit propose de toucher et qu'OMBRES touche aussi** : `map_geometry.gd` (mémo de `build_grid`, lot 3),
 `presentation_3d.gd` (`_suivre` et les uniformes, ISO-04), `game_state.gd` (`_accorder_rendu_aux_vues`, lot 7),
