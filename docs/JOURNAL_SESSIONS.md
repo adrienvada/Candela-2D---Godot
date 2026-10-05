@@ -6136,6 +6136,18 @@ corrigé (S6, protocole 19). Sous 30 px/s, aucun pas ne part (Q50).
 0.7.1 au protocole 18 — un joueur en 0.7.0 et un en 0.7.1 se trouvent toujours. Q15, Q42 et le point de braise attendent la
 0.8.0 : tout ce qui change ce que voit un joueur de l'autre attend la version qui sépare les populations.
 
+## 2026-10-05 — L'audit d'optimisation (session « Audit d'optimisation du jeu », `candela-2d-godot-86`, branche `ccr-7f4baeb9-fzg310`)
+
+Demande d'Adrien du 2026-10-04 : « Délègue à des sous-agents Sonnet 5.5 chaque tâche. Fais un audit complet d'optimisation
+du jeu. » Entrée placée ici, avant celle du chantier SOLO, et non en fin de fichier : la session OMBRES a ajouté la sienne en
+fin de fichier sur sa branche, et deux ajouts au même endroit se seraient croisés à la fusion.
+
+**En propre (créés) :** `docs/AUDIT_OPTIMISATION.md`, `docs/audit_optimisation/**`. **Touché :** `docs/ROADMAP.md` (la ligne
+de mise à jour, une entrée de « Pièges connus », la section « Chantier — l'audit d'optimisation », insérée avant celle du
+chantier OMBRES pour la même raison). **Aucun fichier du jeu ni de `tools/`** : l'audit est en lecture seule ; ses
+instruments de mesure sont copiés dans les annexes, sous un `.gdignore`. Le rapport propose de toucher des fichiers tenus
+par d'autres sessions (le chantier OMBRES en particulier) : rien n'y sera écrit sans l'accord de la session qui les tient.
+
 ## 2026-10-02 — Le chantier SOLO (session « candela-2d-godot-47 », branche `ccr-50a162ad-e2u8lr`)
 
 Brainstorm avec Adrien le jour même, puis : « Go. Délègue à des sous-agents Sonnet 5.5 chaque tâche. Reste juste maître du
@@ -6303,3 +6315,11 @@ chaque redémarrage du conteneur, sa branche jamais.
 famille `q89`, `IMAGES_EBLOUISSEMENT`, `IMAGES_REDESCENTE`, `PAS_REDESCENTE`, `_serie_redescente`, `_etat_du_brouillage` ; le voile
 gardé visible quand le plan le veut ; trois appuis de plus) ; `docs/iso/ombres/q89/` (le geste en patch, la planche, ses mesures).
 Le geste lui-même (`GameState.source_eblouissante_ou`) n'est PAS appliqué : il attend Q89.
+
+**Fusion de `main`, le 2026-10-05 — à la demande d'Adrien (« fusionne ») :** `main` (8615b3b, l'audit d'optimisation) fusionnée
+dans `claude/determined-pasteur-mtrws1`, pour que la PR du chantier se fusionne sans conflit. Un seul conflit, la ligne
+« Dernière mise à jour » de la ROADMAP : les deux mentions gardées, OMBRES puis l'audit. Vérifié après la fusion : hors de
+`docs/`, l'arbre est celui de la branche ; aucune ligne de la ROADMAP ni du journal, d'un côté ou de l'autre, n'a disparu.
+Signalé, pas corrigé : la section de l'audit cite des lignes de la ROADMAP par leur numéro (« les l. 7659-7662 », « la
+l. 22360 », « la l. 2506 ») ; déjà décalées sur `main` (le tableau de `banc_pics` y est en 22384), elles glissent encore de 5 à
+84 lignes avec cette fusion.

@@ -1,0 +1,13 @@
+# Bloc 3 : la fusee (en bloc, puis ses morceaux), les torches, la vue de dessus
+A|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+sansfusee|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --M-sans-fusee
+fuseevolume|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --fusee-sans-volume
+fuseeombre|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --fusee-sans-ombre2d
+sanstorches|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --sans-torches
+vuededessus|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --2d
+vuededessus|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --2d
+sanstorches|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --sans-torches
+fuseeombre|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --fusee-sans-ombre2d
+fuseevolume|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --fusee-sans-volume
+sansfusee|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --M-sans-fusee
+A|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30

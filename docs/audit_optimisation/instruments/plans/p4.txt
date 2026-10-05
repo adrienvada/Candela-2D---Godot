@@ -1,0 +1,9 @@
+# P4 : l'arene rendue sous le menu du hub (vp1/vp2 en UPDATE_ALWAYS derriere le rideau) contre UPDATE_DISABLED. A = depot ; sansarene = --v-sans-arene-menu. Miroir A B B A A B B A.
+A|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--sonde
+sansarene|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--sonde --v-sans-arene-menu
+sansarene|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--sonde --v-sans-arene-menu
+A|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--sonde
+A|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--sonde
+sansarene|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--sonde --v-sans-arene-menu
+sansarene|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--sonde --v-sans-arene-menu
+A|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--sonde
