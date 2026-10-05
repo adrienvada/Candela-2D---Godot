@@ -136,7 +136,7 @@ func _monter_occluder() -> void:
 		return
 	_etoile = Charte.ombre_de_silhouette(tex)
 	_occluder = _poser_occluder("Occluder", _etoile,
-		CanauxLumiere.couche_ombre_corps(poseur_id))
+		CanauxLumiere.couche_ombre_corps(poseur_id), true)
 	# Q42 — comme celle d'un joueur, l'étoile du leurre vit dans SA canvas : le capteur du leurre ne la voit pas (un corps ne
 	# s'ombre pas lui-même, et le leurre doit se comporter en tout comme le corps qu'il imite), le joueur qu'il imite et la
 	# lightmap oui. Le disque de torse, lui, reste dans le monde, comme celui d'un joueur.
@@ -153,14 +153,21 @@ func etoile() -> LightOccluder2D:
 
 ## Un occluder du leurre : une forme, une couche d'ombre, et rien d'autre. Les deux
 ## occluders d'un corps passent par ici pour que tout ce qui ne les distingue PAS
-## reste écrit une seule fois — `cull_mode`, le parentage, la ressource neuve.
-## Seules la forme et la couche diffèrent, et elles sont les deux arguments.
-func _poser_occluder(nom: String, forme: PackedVector2Array, couche: int) -> LightOccluder2D:
+## reste écrit une seule fois — le parentage, la ressource neuve.
+## Seules la forme et la couche diffèrent, et elles sont les deux arguments ; plus,
+## depuis OM1, l'étoile : la sienne vient de `Charte.occulteur_d_etoile` (culling
+## compris), la MÊME fonction que celle du joueur — le leurre fait le même trou. Le
+## disque de torse garde `CULL_DISABLED`, comme celui d'un joueur.
+func _poser_occluder(nom: String, forme: PackedVector2Array, couche: int, etoile_de_corps := false) -> LightOccluder2D:
 	var occ := LightOccluder2D.new()
 	occ.name = nom
-	var poly := OccluderPolygon2D.new()
-	poly.polygon = forme
-	poly.cull_mode = OccluderPolygon2D.CULL_DISABLED
+	var poly: OccluderPolygon2D
+	if etoile_de_corps:
+		poly = Charte.occulteur_d_etoile(forme)
+	else:
+		poly = OccluderPolygon2D.new()
+		poly.polygon = forme
+		poly.cull_mode = OccluderPolygon2D.CULL_DISABLED
 	occ.occluder = poly
 	occ.occluder_light_mask = couche
 	add_child(occ)

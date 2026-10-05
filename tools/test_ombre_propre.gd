@@ -43,9 +43,9 @@ const ORIENTATIONS := [0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0]
 ## Les trois classes que le rapport `cloud-ombre-orientation` a vues noires, torche du côté de l'arme.
 const CLASSES_NOIRES := ["occulteur", "fumiste", "incendiaire"]
 const ANNEAU := 64
-## OMBRES — le mode de culling des étoiles de corps aujourd'hui : `CULL_DISABLED`, l'intérieur de l'étoile dans l'ombre. OM1 le
-## passera à `CULL_COUNTER_CLOCKWISE` (l'ombre part du bord arrière), et cette ligne avec lui.
-const CULL_ETOILE_ATTENDU := OccluderPolygon2D.CULL_DISABLED
+## OMBRES — le mode de culling des étoiles de corps : `CULL_COUNTER_CLOCKWISE` depuis OM1 (`Charte.occulteur_d_etoile`), l'ombre
+## part du bord arrière du corps ; c'était `CULL_DISABLED` jusque-là, l'intérieur de l'étoile dans l'ombre.
+const CULL_ETOILE_ATTENDU := OccluderPolygon2D.CULL_COUNTER_CLOCKWISE
 
 var _failures := 0
 var _verifications := 0
@@ -297,11 +297,23 @@ func _forme_monde(occ: LightOccluder2D) -> PackedVector2Array:
 	return t * occ.occluder.polygon
 
 
-## La règle de la Light2D : un point est dans l'ombre si le segment lampe → point coupe le bord d'un occluder dont la couche
-## est dans le masque d'ombre de la lampe — un point DANS la forme aussi (il faut en franchir le bord pour l'atteindre).
-static func _ombre(lampe: Vector2, point: Vector2, forme: PackedVector2Array) -> bool:
+## La règle de la Light2D : un point est dans l'ombre si le segment lampe → point coupe une arête d'un occluder dont la couche
+## est dans le masque d'ombre de la lampe — et, sous un culling, une arête que ce culling GARDE. Sans culling, toutes : un point
+## DANS la forme est dans l'ombre (il faut en franchir le bord pour l'atteindre). Sous `CULL_COUNTER_CLOCKWISE` (les étoiles
+## depuis OM1), le moteur écarte les arêtes que la lampe voit tourner dans un sens — celles dont le produit vectoriel
+## (a − lampe) × (b − lampe) est NÉGATIF, ce qui, pour une étoile d'aire signée positive, sont les arêtes tournées vers la lampe
+## (la règle mesurée au banc des ombres, OM0 : l'intérieur côté lampe éclairé, l'ombre derrière). `CULL_CLOCKWISE`, l'inverse.
+static func _ombre(lampe: Vector2, point: Vector2, forme: PackedVector2Array,
+		cull: int = OccluderPolygon2D.CULL_DISABLED) -> bool:
 	for i in forme.size():
-		if Geometry2D.segment_intersects_segment(lampe, point, forme[i], forme[(i + 1) % forme.size()]) != null:
+		var a := forme[i]
+		var b := forme[(i + 1) % forme.size()]
+		if cull != OccluderPolygon2D.CULL_DISABLED:
+			var sens := (a - lampe).cross(b - lampe)
+			if (cull == OccluderPolygon2D.CULL_COUNTER_CLOCKWISE and sens < 0.0) \
+					or (cull == OccluderPolygon2D.CULL_CLOCKWISE and sens > 0.0):
+				continue
+		if Geometry2D.segment_intersects_segment(lampe, point, a, b) != null:
 			return true
 	return false
 
@@ -313,13 +325,13 @@ func _part_eclairee(lampe: Light2D, centre: Vector2, sous_vue: Viewport, avant: 
 	var formes: Array = []
 	for occ in _occluders_vus(sous_vue, avant):
 		if ((occ as LightOccluder2D).occluder_light_mask & lampe.shadow_item_cull_mask) != 0:
-			formes.append(_forme_monde(occ))
+			formes.append([_forme_monde(occ), (occ as LightOccluder2D).occluder.cull_mode])
 	var eclaires := 0
 	for k in ANNEAU:
 		var p := centre + Vector2.from_angle(TAU * (float(k) + 0.5) / float(ANNEAU)) * rayon
 		var ombree := false
 		for f in formes:
-			if _ombre(lampe.global_position, p, f):
+			if _ombre(lampe.global_position, p, f[0], f[1]):
 				ombree = true
 				break
 		if not ombree:
@@ -379,11 +391,15 @@ func _l_effet() -> void:
 	_check("APRÈS : l'anneau du corps est éclairé à 100 %% dans les %d prises (dix classes × huit orientations × deux sens)"
 		% n_prises, tout_a_1, "pire part éclairée : %.3f" % pire_apres)
 	# Le contrôle : le même calcul, avec les étoiles dans le monde, VOIT le défaut. Sans lui, « 100 % » ne prouverait rien.
+	# ⚠️ Son seuil suit le culling des étoiles (OM1) : quand chaque arête jetait son ombre, le corps qui voyait sa propre étoile
+	# tombait sous 5 % ; sous `CULL_COUNTER_CLOCKWISE`, l'avant de l'anneau reste éclairé et seule la moitié arrière tombe dans
+	# l'ombre — 44 à 50 % pour les trois classes. Toujours un défaut net contre les 100 % exigés : sous 60 %.
+	var seuil_avant := 0.05 if CULL_ETOILE_ATTENDU == OccluderPolygon2D.CULL_DISABLED else 0.6
 	for porteur in 2:
 		for slug in CLASSES_NOIRES:
 			var v: float = pires_avant["J%d porte / %s" % [porteur + 1, slug]]
-			_check("AVANT (étoile dans le monde) : J%d porte, %s — torche du côté de l'arme, l'anneau tombe à %.0f %%"
-				% [porteur + 1, slug, v * 100.0], v < 0.05)
+			_check("AVANT (étoile dans le monde) : J%d porte, %s — torche du côté de l'arme, l'anneau tombe à %.0f %% (sous %.0f %%)"
+				% [porteur + 1, slug, v * 100.0, seuil_avant * 100.0], v < seuil_avant)
 	var au_moins_une_partielle := false
 	for cle in pires_avant:
 		au_moins_une_partielle = au_moins_une_partielle or (pires_avant[cle] < 0.999)

@@ -1019,8 +1019,11 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 			_duel(ECART_DUEL, 0.0)
 			# Posé à chaque image : le modèle redescend seul, et une valeur
 			# écrite une fois aurait fondu pendant le repos.
+			# OMBRES, OM1 (Q81) — et ÉBLOUI PAR J2, nommé : le brouillage n'efface
+			# plus que le corps qui éblouit, et un éblouissement sans source
+			# n'effacerait personne (le plan montrerait J2 plein).
 			if is_instance_valid(_main.p1):
-				_main.p1.apply_dazzle(1.0)
+				_main.p1.apply_dazzle(1.0, _main.p2)
 		await _prendre(_plan(plans, "eblouissement"), ebloui)
 
 	if _demande(plans, "fusee"):

@@ -2358,8 +2358,11 @@ func _process(delta):
 ## permanence de l'arbitrage. Prix assumé : le voile blanc arrive chez le client
 ## avec un demi aller-retour de retard, sur un effet qui dure une seconde.
 func _maj_eblouissement(delta: float) -> void:
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-		return
+	# OMBRES, OM1 (Q81, 2026-10-05) — le client ne calcule toujours PAS l'éblouissement (l'hôte le réplique : il pénalise vitesse
+	# et visée, sa prédiction divergerait), mais il en calcule la SOURCE, pour son seul joueur : le brouillage n'efface plus que
+	# le corps qui éblouit, et le client doit savoir lequel sans que rien de neuf ne voyage sur le fil. La passe 1 ci-dessous,
+	# les mêmes fonctions que l'hôte ; de la passe 2, seul `retenir_la_source`, sur l'éblouissement répliqué.
+	var client := NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT
 	if not is_instance_valid(p1) or not is_instance_valid(p2):
 		return
 	var espace := p1.get_world_2d().direct_space_state
@@ -2387,7 +2390,7 @@ func _maj_eblouissement(delta: float) -> void:
 	# ⚠️ **Les PNJ de l'aventure sont des cibles et des sources comme J1 et J2** (SOLO, S9b) : la boucle ne connaissait que les deux
 	# joueurs, et la torche d'un PNJ n'éblouissait pas le joueur, ni la sienne un PNJ. `_joueurs_en_lice()` rend J1, J2 puis les figurants ;
 	# sans figurant, c'est exactement la liste d'avant.
-	var cibles := _joueurs_en_lice()
+	var cibles: Array = [p2] if client else _joueurs_en_lice()
 	var gagnante := {}
 	var plafond := {}
 	for cible in cibles:
@@ -2400,10 +2403,17 @@ func _maj_eblouissement(delta: float) -> void:
 				plafond[cible] = v
 				gagnante[cible] = src["noeud"]
 
+	if client:
+		p2.retenir_la_source(gagnante[p2], plafond[p2], delta)
+		return
+
 	# ── PASSE 2 : intégrer ───────────────────────────────────────────────────
+	# OMBRES, OM1 (Q81) — puis retenir la source : `source_eblouissante` (la gagnante de l'image) et la source qui TIENT le
+	# niveau, celle que le brouillage efface (`Player.source_du_brouillage`) — après l'intégration, qui dit si l'éblouissement
+	# est retombé au plafond.
 	for cible in cibles:
 		cible.integrer_eblouissement(plafond[cible], delta)
-		cible.source_eblouissante = gagnante[cible]
+		cible.retenir_la_source(gagnante[cible], plafond[cible], delta)
 
 
 ## J1, J2, puis les PNJ de l'aventure encore dans l'arbre : ceux qui voient, éblouissent et sont éblouis. Vide de figurants, c'est `[p1, p2]`.
@@ -2838,9 +2848,13 @@ func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
 ## Pas de cône : un canon crache dans toutes les directions. Une ligne de vue,
 ## en revanche, oui — un mur arrête un flash comme il arrête un faisceau.
 func _flash_de_tir(tireur: Node2D) -> void:
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-		return # L'hôte tranche, la valeur est répliquée.
 	if not is_instance_valid(p1) or not is_instance_valid(p2):
+		return
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		# L'hôte tranche, la valeur est répliquée. OMBRES, OM1 (Q81) : le client note seulement QUI l'atteint, pour son
+		# brouillage — la même règle d'atteinte (`_pic_du_flash`), sans rien verser dans ses yeux.
+		if tireur != p2 and _en_jeu(p2) and _pic_du_flash(tireur, p2) > 0.0:
+			p2.noter_la_source_du_pic(tireur)
 		return
 	# Qui le flash éblouit : l'autre joueur du duel ; en aventure (S9b), le joueur quand un PNJ tire, et les PNJ quand le joueur tire — jamais
 	# un PNJ qui tire sur un autre PNJ (une équipe, voir `_plafond_de_source`).
@@ -2856,24 +2870,33 @@ func _flash_de_tir(tireur: Node2D) -> void:
 		cibles.append(p1)
 	if cibles.is_empty() or not _en_jeu(tireur):
 		return
+	for cible in cibles:
+		if not _en_jeu(cible):
+			continue
+		var pic := _pic_du_flash(tireur, cible)
+		if pic <= 0.0:
+			continue
+		# OMBRES, OM1 (Q81) — le pic nomme son tireur : tant qu'il n'est pas résorbé, c'est lui que le brouillage efface
+		# (`Player.source_du_brouillage`).
+		cible.apply_dazzle(pic, tireur)
+
+
+## Le pic du flash de `tireur` dans les yeux de `cible` — 0 hors de portée ou sans ligne de vue. La règle d'atteinte, écrite
+## une fois pour l'hôte (qui verse le pic) et pour le client (qui en note seulement la source, OM1).
+func _pic_du_flash(tireur: Node2D, cible: Node2D) -> float:
 	var eclat := 1.0
 	var arme: WeaponData = tireur.current_weapon
 	if arme:
 		eclat = arme.muzzle_flash_intensity
-	for cible in cibles:
-		if not _en_jeu(cible):
-			continue
-		var pic := Eblouissement.pic_de_flash(
-			tireur.global_position.distance_to(cible.global_position), eclat)
-		if pic <= 0.0:
-			continue
-		# Le flash de tir appartient au tireur, comme sa torche : son propre leurre ne
-		# l'ombre pas à l'écran (`muzzle_flash.shadow_item_cull_mask`, player.gd), il ne
-		# l'arrête donc pas ici non plus (étape 28, lot G).
-		if not _ligne_de_vue(p1.get_world_2d().direct_space_state, tireur, cible,
-				int(tireur.player_id)):
-			continue
-		cible.apply_dazzle(pic)
+	var pic := Eblouissement.pic_de_flash(tireur.global_position.distance_to(cible.global_position), eclat)
+	if pic <= 0.0:
+		return 0.0
+	# Le flash de tir appartient au tireur, comme sa torche : son propre leurre ne
+	# l'ombre pas à l'écran (`muzzle_flash.shadow_item_cull_mask`, player.gd), il ne
+	# l'arrête donc pas ici non plus (étape 28, lot G).
+	if not _ligne_de_vue(p1.get_world_2d().direct_space_state, tireur, cible, int(tireur.player_id)):
+		return 0.0
+	return pic
 
 ## L'index de classe d'une arme, pour le fil — les DIX, et non les quatre d'origine.
 ##

@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-05 (OMBRES : Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-05 (OMBRES : OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Q81 = le brouillage n'efface que le corps qui éblouit, et seulement au-delà de la rétrodiffusion de 0,06 — en duel, chez le client en ligne et pour le bot** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Oui » ; livré le même jour, avec OM1) | Allumer sa torche rendait tout ennemi transparent à 35 % ; une fusée ou un gadget effaçait l'adversaire qu'ils n'avaient pas fait ; en aventure, UN PNJ qui éblouissait effaçait les six — et le culling d'OM1, seul, aurait laissé voir le sol éclairé à travers un PNJ délavé. **La source est celle qui TIENT le niveau d'éblouissement**, pas la gagnante de l'image (`Player.source_du_brouillage`) : la première écriture, qui suivait la gagnante plus un tireur jamais oublié, effaçait l'adversaire pendant la redescente d'une fusée. Le plancher se SOUSTRAIT (`Brouillage.opacite_vue`) au lieu de servir de seuil : l'opacité reste continue. Le client calcule la source lui-même — rien ne voyage de neuf —, et c'est aussi ce qui donne enfin une source à son appareil de brouillage, dont le halo retombait toujours sur l'adversaire. Voir « OM1 — FAITE » (chantier OMBRES) et le piège « Qui m'éblouit ? » du même jour. |
 | **Les tempéraments sont répartis dans les salles : 47 PNJ, 32 salles, aucun dans l'initiation ni dans les trois premières salles d'un chapitre** (2026-10-04, Adrien, même session, sur SOLO-Q11 : « Répartis-les toi-même ») | Un caractère sert le thème du chapitre : des guetteurs sur les postes fixes (le PNJ de « Le guetteur », 1.4 ; les places du chapitre 8), des embusqués dans le noir (« La zone sombre », « L'embuscade », « L'ombre »), des traqueurs chez ceux qui écoutent et chez les chasseurs (« La traque »), des peureux dans les groupes (chapitre 5, salles pleines). La table vit dans `tools/poser_temperaments.py`, qui écrit les fichiers au format exact des fabriques (vérifié identique sur les cent salles) — **à relancer après toute fabrique qui régénère un chapitre**, sans quoi ses tempéraments disparaissent. Gardes des dix chapitres et marches au vrai corps vertes. |
 | **L'intelligence des PNJ, S11 : dégâts de 10 à 20 par balle, rafales de 1 à 3 coups tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments** (2026-10-04, Adrien, même session : « Il faudrait que les PNJ ne fassent pas plus de 10-20 dégâts par tir. Que parfois ils arrivent à tirer plusieurs fois », puis, sur la liste de propositions, « Fais 1, 2, 3, 7, 8 ») | Tout se pose sur les PNJ du catalogue (`ProfilBot.pnj()`), jamais sur le bot de l'entraînement ni sur les boss, réglés au banc. **Dégâts** : `degats_balle` (10 au bord, 20 au centre) l'emporte sur l'arme — il faut 5 à 10 balles pour abattre un joueur au lieu de 2 à 4. **Rafales** : `poids_rafale` (50 / 30 / 20 %), chaque coup suivant 5° plus large, ni tolérance ni mise en joue entre deux coups. **Annonce** : la torche se braque pendant la mise en joue, et toute torche de PNJ qui s'allume claque, audible de partout. **Fouille** : en recherche, sur la place perdue, il balaie à ±70° torche allumée, sans tirer dans le vide, puis la patrouille reprend. **Tempéraments** : clé de format `temperament` (guetteur, traqueur, peureux, embusqué), refusée sur le boss et le sourd et aveugle ; l'éditeur web la propose. Les propositions 4 (voix d'état), 5 (réaction aux coups), 6 (alerte entre PNJ) et 9 (aide après plusieurs morts) attendent. Détail : « S11 ». |
 | **La 0.8.3 part : le solo S10 — l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, plus d'enjambement, la mise en joue des PNJ, leurs tirs audibles** (2026-10-04, Adrien, à la session « Iso 1 Opus » : « Publie la version 0.8.3 ») | `config/version` passe de 0.8.2 à 0.8.3 : seul le **dernier chiffre** monte, parce que rien ne change sur le fil (`Protocol.VERSION` reste 19 ; l'enjambement retiré garde son bit) — `tools/verifier_publication.sh v0.8.3` le confirme. Chemin de publication : la PR #5 fusionnée dans `main` (`33594aa`), ce commit de version poussé d'abord sur `claude/candidat-0.8.3` pour que la CI rejoue la suite complète **hors du Mac d'Adrien** (plus aucun Godot n'y tourne sans son mot), puis `main` en avance rapide et le tag `v0.8.3`, qui déclenche `.github/workflows/release.yml`. |
@@ -3270,6 +3271,20 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### « Qui m'éblouit ? » a deux réponses — et un correctif d'écran calculé chez l'hôte n'atteint pas le client (2026-10-05)
+
+Chantier OMBRES, OM1 (`player.gd`, `retenir_la_source`). Deux leçons du même lot. **(1)** La source qui tient le PLAFOND cette
+image n'est pas toujours celle qui a mis dans les yeux le NIVEAU qu'on y lit : l'éblouissement monte et redescend à vitesse finie,
+et pendant une redescente (jusqu'à 0,375 s) ou après le pic d'un tir (environ 0,2 s), le niveau ne vient plus de la gagnante. Un
+effet qui dit « ce corps-là t'aveugle » suit le NIVEAU. La première écriture d'OM1 suivait la gagnante, plus un tireur jamais
+oublié : elle effaçait l'adversaire pendant que se dissipait l'éblouissement d'une fusée, et faisait réapparaître plein, dès la
+torche détournée, le corps qui venait d'aveugler. La règle : la source ne revient à la gagnante que lorsque l'éblouissement est
+retombé à son plafond. **(2)** Le correctif du 2026-09-09 — l'appareil de brouillage se tourne vers la vraie source — était juste
+et gardé, chez l'hôte : `source_eblouissante` n'était posée que là. Chez un client le repli sur l'adversaire jouait toujours, et
+une fusée qui l'aveuglait allumait le halo du brouillage sur l'autre joueur, près d'un mois durant, sans qu'aucune suite ne le
+voie (aucune ne joue le client). Une règle d'écran qui lit une donnée calculée par l'hôte seul ne vaut que chez l'hôte : devant
+tout correctif d'écran, demander si sa donnée existe chez le client.
 
 ### Hors de la carte, la physique dit « libre » (2026-10-04)
 
@@ -33902,7 +33917,7 @@ ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée
 | Lot | Objet | Attend | État |
 |---|---|---|---|
 | **OM0** | Le banc des ombres : planche avant/après, scintillement, sonde de lightmap, gardes headless | — | ✅ **FAITE le 2026-10-04** — voir « OM0 » plus bas |
-| **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | Q81 ✅ (2026-10-05) | 🟡 **PRÉPARÉ le 2026-10-04** (le culling, ses gardes, ses planches : `docs/iso/ombres/om1/`) — voir « OM1 » plus bas ; Q81 tranchée le 2026-10-05 : **en livraison** (le culling et le brouillage par la source, ensemble) |
+| **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | Q81 ✅ (2026-10-05) | ✅ **FAITE le 2026-10-05** (le culling et le brouillage par la source, ensemble) — voir « OM1 » plus bas ; Q89 (l'appareil de brouillage) posée à la livraison |
 | **OM2** | L'ombre a la forme du corps voxel | Q82 ✅ (2026-10-05), après OM1 | à faire |
 | **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | Q84 ✅ (2026-10-05) ; **Q83, Q85** ouvertes | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) — voir « OM3a » plus bas ; OM3b (pâte D, respiration, filtre) attend Q83 à Q85 |
 | **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | Q86 ✅, Q87 ✅ (2026-10-05) | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) — voir « OM4a » plus bas ; OM4b (couches des PNJ, lumières posées) attend Q86 et Q87 |
@@ -33974,7 +33989,8 @@ n'est demandée sur le Mac d'Adrien, décision du 2026-09-30).
 ### Les questions pour Adrien (Q81 à Q88)
 
 Posées le 2026-10-04, toutes d'emblée, avec l'avis du chantier ; chacune ne bloque que son lot. **Tranchées le 2026-10-05 :
-Q81, Q82, Q84, Q86, Q87, Q88. Ouvertes : Q83 (la pâte D, après sa planche) et Q85 (le filtre d'ombre).**
+Q81, Q82, Q84, Q86, Q87, Q88. Ouvertes : Q83 (la pâte D, après sa planche), Q85 (le filtre d'ombre) et Q89 (l'appareil de
+brouillage, posée à la livraison d'OM1).**
 
 - **Q81 — Le brouillage n'efface-t-il que le corps qui éblouit, et seulement au-delà de l'auto-éblouissement de 0,06 ?**
   Aujourd'hui, allumer sa torche suffit à rendre tout ennemi transparent à 35 % (0,648), en duel comme en solo, et un seul PNJ
@@ -33990,6 +34006,8 @@ Q81, Q82, Q84, Q86, Q87, Q88. Ouvertes : Q83 (la pâte D, après sa planche) et 
   fort qu'aujourd'hui : un argument de plus pour (b), la source.
   **✅ Décision d'Adrien, 2026-10-05 : « Oui »** — aux deux gestes : n'effacer que le corps qui éblouit, et seulement au-delà
   de l'auto-éblouissement de 0,06. Débloque OM1 ; le duel et le bot changent avec (la matrice de difficulté se rejoue).
+  **Livrée le 2026-10-05 avec OM1** — voir « OM1 — FAITE ». La source est celle qui TIENT le niveau d'éblouissement, pas la
+  gagnante de l'image ; le client en ligne la calcule lui-même, sans rien de neuf sur le fil.
 - **Q82 — En iso, l'ombre d'un corps prend-elle la forme du corps voxel** (le personnage, l'arme portée sans pointe au sol,
   réduite à l'accroupi) **plutôt que celle du sprite vu de dessus ?** Ce n'est pas le disque écarté par Q42 : la forme reste
   celle du personnage. **Avis : oui, après avoir vu OM1 à l'image.** Bloque OM2.
@@ -34032,6 +34050,18 @@ Q81, Q82, Q84, Q86, Q87, Q88. Ouvertes : Q83 (la pâte D, après sa planche) et 
   d'un coup.
   **✅ Décision d'Adrien, 2026-10-05 : « Ombre »** — contre l'avis : les corps ont une ombre finie sous un plafonnier, calculée
   dans le matériau (OM5), sans attendre OM7.
+- **Q89 — L'appareil de brouillage (le flou, le halo) et le voile suivent-ils, eux aussi, la source qui TIENT le niveau ?**
+  *Posée le 2026-10-05, à la livraison d'OM1.* Le brouillage du corps suit désormais la source qui tient le niveau
+  (`Player.source_du_brouillage`) ; l'appareil et le voile suivent encore la gagnante de l'image (`source_eblouissante`). Pendant
+  une redescente que plus rien ne tient (une fusée éteinte, une torche détournée), ils retombent donc sur l'adversaire
+  (`source_eblouissante_ou`) : un halo jusqu'à 0,375 s sur sa position — le défaut du 2026-09-09, en bref, chez l'hôte comme chez
+  le client ; et après un tir, ils restent sur la lampe du moment au lieu du tireur. Le geste : `source_eblouissante_ou` lit
+  `source_du_brouillage()`. **Touche le duel** (ce que l'appareil montre pendant chaque redescente et après chaque tir), pas le
+  bot. **Avis : oui** — une seule source pour tout ce que l'éblouissement montre ; avant, une planche du brouillage pendant une
+  redescente. ⚠️ **À trancher avec la D2 de l'audit d'optimisation** (même jour) : un plancher posé dans `Brouillage._dose`
+  éteindrait l'appareil au repos (sa propre torche l'allume à chaque image : une copie d'écran de plus). OM1 a posé le sien dans
+  `opacite_vue`, pour le corps seulement ; si D2 est retenue, `opacite_vue` cesse de soustraire le sien — sinon il compte deux
+  fois (0,12) : `test_ombres_regles` le garde (« le plancher ne compte qu'une fois »).
 
 ### Les lots
 
@@ -34160,7 +34190,138 @@ joue pas une fusillade (O12), ni le duel en ligne.
 **Signalé, pas corrigé.** `photographe._mur_entre` et `_sol_libre` n'excluent que J1 et J2 : un outil qui s'en sert près d'un PNJ
 le prend pour un mur (« Pièges connus », 2026-10-04).
 
-### OM1 — PRÉPARÉ le 2026-10-04, pas livré : l'ombre part de derrière le corps (attend Q81)
+### OM1 — FAITE le 2026-10-05 : l'ombre part de derrière le corps, et le brouillage n'efface plus que le corps qui éblouit
+
+**Deux gestes, livrés ensemble** (Q81 tranchée par Adrien le 2026-10-05 : « Oui ») — le culling seul aurait laissé voir le sol
+désormais éclairé à travers un PNJ délavé.
+
+1. **Le culling de l'étoile**, préparé le 2026-10-04 et appliqué tel quel (ses mesures : « OM1 — préparé », plus bas) :
+   `Charte.occulteur_d_etoile(forme)`, en `CULL_COUNTER_CLOCKWISE`, pour l'étoile du joueur, de chaque PNJ et du leurre. Le sol
+   devant les pieds d'un corps, côté lampe, passe de 0,000 à 0,24–0,39 ; l'ombre derrière lui et le capteur du corps (Q42) ne
+   changent pas.
+2. **Le brouillage par la source, au-delà de 0,06** (O2, Q81). Un corps ne s'efface aux yeux d'un regardeur ébloui que s'il EST
+   la source de cet éblouissement, et de ce qui DÉPASSE la rétrodiffusion de sa propre torche (`Brouillage.opacite_vue`,
+   `PLANCHER` lu sur `Eblouissement.RETRODIFFUSION`). Le plancher se **soustrait** au lieu de servir de seuil : l'opacité part de
+   1 et reste continue (0,993 juste au-dessus), là où un seuil la ferait sauter de 1 à 0,648. Allumer sa torche n'efface plus
+   personne ; une fusée, une mine ou un gadget qui aveugle n'efface plus l'adversaire ; en aventure, le PNJ qui éblouit s'efface,
+   les autres restent pleins.
+   - **« La source », c'est celle qui TIENT le niveau d'éblouissement** (`Player.source_du_brouillage`, `_source_du_niveau`,
+     `retenir_la_source`) : la gagnante de l'image tant que l'éblouissement est à son plafond ou dessous ; pendant une
+     redescente, celle qui l'y a mis ; un flash de bouche nomme son tireur (`apply_dazzle(pic, tireur)`,
+     `noter_la_source_du_pic`), tenu `TENUE_DU_TIR` (0,1 s) — chez le client, le tir arrive par RPC et le pic par `net_dazzle`, à
+     30 Hz : sans tenue, la passe suivante rendait la source aux lampes avant que le pic n'arrive.
+   - **Le client en ligne calcule la source de son joueur, sans rien de neuf sur le fil** : la passe 1 de `_maj_eblouissement`,
+     les mêmes fonctions que l'hôte, pour son seul joueur, puis `retenir_la_source` sur l'éblouissement que l'hôte réplique —
+     sans y toucher. Un tir de l'adversaire n'y verse rien : il en note le tireur, par la règle d'atteinte de l'hôte, écrite une
+     fois pour les deux (`_pic_du_flash`). `Protocol.VERSION` ne bouge pas.
+   - **Le bot** : `PerceptionBot.corps_distinct(ebloui, est_la_source)` ; `PerceptionBotNoeud` lit `source_du_brouillage()` du
+     corps qu'il pilote (`monde["ebloui_par_la_cible"]`). Il perd le corps de sa cible vers 0,15 d'éblouissement VENU D'ELLE, au
+     lieu de 0,09 venu de n'importe quoi.
+
+**Une conséquence chez le client, qui est un correctif.** Aucun client n'avait jamais connu `source_eblouissante` (l'hôte seul la
+posait) : chez lui, le flou et le halo du brouillage, et le voile, retombaient toujours sur l'adversaire
+(`source_eblouissante_ou`) — **une fusée qui aveuglait le client allumait le halo du brouillage sur la position de l'autre**. C'est
+le défaut corrigé chez l'hôte le 2026-09-09 (« un effet dont le métier est de MASQUER désignait la position de l'autre ») : le
+client le gardait, faute de source. Il la connaît désormais — c'est aussi la D4 de l'audit d'optimisation (2026-10-05), « lu dans le code, jamais vu », que ce lot
+referme. *Lu dans le code et gardé* (`test_ombres_regles`, E) ; *pas vu à
+l'écran* — aucune partie en ligne n'a été jouée.
+
+**Pourquoi la source qui tient le niveau, et non la gagnante de l'image — le défaut de la première écriture.** Elle suivait la
+gagnante, plus le dernier tireur tant que l'éblouissement restait au-dessus du plafond — et ne l'oubliait jamais. Deux défauts,
+trouvés en écrivant les gardes : un tireur noté une fois redevenait la source de TOUTE redescente suivante (l'adversaire
+s'effaçait pendant que se dissipait l'éblouissement d'une fusée) ; et la redescente qui suit une torche rendait aussitôt la source
+aux lampes du moment — personne : le corps qui venait d'aveugler réapparaissait plein pendant que les yeux étaient encore à 0,8.
+La première écriture remise à la place de la mémoire (sabotage S5) : cinq vérifications rouges.
+
+**Ce que le banc mesure** (`docs/iso/ombres/om1/planche_brouillage_livre.jpg`, `mesures_livre.json` ; salle 0.9, le PNJ 0 sous
+la torche de J1, côté caméra) — l'opacité des six PNJ :
+- la torche de J1 seule (J1 ébloui par elle, 0,06) : **0,648 → 1,000** pour les six PNJ — et dans les dix-sept plans d'étoile et
+  de classe, où cette même torche seule les tenait à 0,648 ;
+- le PNJ 0 éblouit J1 (0,31) : **0,053 pour les six → 0,124 pour lui, 1,000 pour les cinq autres** ;
+- l'étoile, livrée comme préparée : le sol dans l'étoile côté lampe, l'ombre derrière le corps, sa largeur et le capteur du PNJ
+  sont identiques au dix-millième dans les dix-sept plans (0,24–0,39 ; 0,000 ; 32 à 46 px ; 0,558, et 0,820 à 70 px).
+- La planche (trois colonnes : avant, le culling seul, OM1 livré) montre ce que Q81 répare : sous la seule torche de J1, le PNJ
+  passait de transparent (avant) à délavé sur un sol éclairé (le culling seul), et il est plein ; ébloui par lui, le PNJ s'efface,
+  et l'encoche noire qui le trahissait encore n'est plus là.
+
+**La matrice du bot et les boss, rejoués** (Q81 touche sa perception). La matrice de S4 — FACILE / NORMAL / DIFFICILE contre le joueur type, graines 401 à 416, six cartes, quatre comportements, 384
+duels par ligne —, **sur les mêmes graines avant et après** : la base (`aa5e9cca`, sans OM1) rend **78 / 55 / 32 %**, OM1
+**78 / 53 / 30 %** (cibles 80 / 55 / 30) ; l'ordre tient sur chaque carte sauf `00000001`, comme avant (NORMAL et DIFFICILE à
+égalité, 33 / 33). Duel par duel : 1 004 des 1 152 sont identiques au pas près, 106 changent de durée sans changer d'issue,
+**42 changent d'issue** — 27 vers le bot, 15 vers le joueur type, presque tous en NORMAL et en DIFFICILE. L'effet est petit et
+va au bot ; *lecture, pas preuve* : le plancher de 0,06 joue des deux côtés (chacun perd le corps de l'autre vers 0,15 au lieu
+de 0,09), et le bot ébloui par l'éclair de celui qui « tire puis bouge » en garde mieux le corps (DIFFICILE : 21 → 16 %).
+Les dix boss, sur les blocs de graines du tableau de S9b (801 et 901 pour le Parasite, le Fumiste, le Terrassier, la Sentinelle et
+le Spectre ; 1001 à 1008 pour les cinq autres ; 192 duels par bloc) — la victoire du joueur type, **base puis OM1, appariés** :
+Parasite 57 → 56 ; Fumiste 65 → 63 ; Illusionniste 61 → 62 ; Braconnier 56 → 56 ; Terrassier 60 → 57 ; Incendiaire 66 → 65 ;
+Sentinelle 58 → 57 ; Occulteur 56 → 58 ; Allumeur 56 → 57 ; Spectre 60 → 57 %. Sur 2 880 duels, 181 changent d'issue : 105 vers
+le bot, 76 vers le joueur type. Hors de la bande de 55 ± 7 de S9b : le Fumiste (65) et l'Incendiaire (66) **l'étaient déjà
+avant OM1** — signalé, pas instruit ; OM1 les en rapproche d'un ou deux points, et n'en fait sortir ni rentrer aucun. Un bloc
+du Spectre (901) a planté dans le moteur au premier passage d'OM1 (« The caller thread can't call the function
+`propagate_notification()` » sur `/root`, puis un signal 11, à la deuxième carte) ; rejoué seul, il est allé au bout sans
+planter : ce n'est pas une règle du jeu, et il n'est pas instruit.
+
+**Les gardes.** `test_ombres_regles` (+34 vérifications, 71 en tout), sur une vraie manche scindée, J1 et J2 face à face à 110 px :
+la règle pure (aucun corps qui n'est pas la source ne s'efface, à 21 niveaux ; la rétrodiffusion seule n'efface pas même la source ;
+au-delà, sans saut ; et le plancher ne compte qu'une fois, calculé depuis les constantes — voir Q89) ; **A** la torche de J1 dans les yeux de J2 l'efface (0,000 à 0,874 d'éblouissement), et la sienne propre
+(0,060) n'efface plus J2 (1,000 ; 0,648 avant) ; **B** la torche éteinte, J1 reste la source pendant les dix-huit pas de la
+redescente, puis plein ; **C** un tir nomme son tireur à l'instant, puis le rend ; **D** une vraie fusée posée en plein feu
+(`forcer_age`) éblouit J2 à 0,887 et J1 reste plein (0,000 avant Q81) ; **E** le client (la bascule de mode le temps d'un appel,
+sans image) trouve la source de son joueur, l'appareil de brouillage s'y tourne, rien de l'éblouissement ne bouge, un tir adverse
+nomme le tireur sans pic et le garde le temps de la tenue, son propre tir ne touche personne ; **F** un tir par-dessus la fusée
+nomme le tireur, puis la rend à la fusée ; **G** la fusée éteinte, J1 reste plein à chaque pas de la redescente — le dernier
+tireur ne revient pas. Le bot : un `PerceptionBotNoeud` monté sur J2, ébloui par sa cible le sait, par la fusée non ; et un vrai
+joueur porte `source_du_brouillage` (le repli du nœud de perception, écrit pour les corps factices, ne doit pas cacher sa
+disparition). `test_aventure_boss` (81, +4) : la vérification « ébloui (0,6), il ne voit plus le joueur » nomme désormais la
+source (le joueur), et ses converses — ébloui autant par une lumière posée, puis par sa propre torche, il le voit encore ; le
+modèle perd le corps au premier niveau de 0,20 au lieu de 0,10 (pas de 0,05), et, ébloui par autre chose, le voit à tout niveau.
+
+**Sabotages exécutés — chacun restauré à l'identique (md5)** : S1 `opacite_vue` ignore la source — huit rouges (cinq et trois) ;
+S2 le plancher retiré — deux ; S3 l'éclair ne nomme plus son tireur — trois ; S4 la branche client retirée — quatre ; S5 la
+première écriture (le tireur jamais oublié) — cinq ; S6 le bot se croit toujours ébloui par sa cible — trois ; S7 le repli du nœud
+de perception rate la méthode d'un vrai joueur (une faute de frappe) — deux ; S8 la tenue du tir à zéro — un ; S9 le culling
+retiré — quatre ; S10 un second plancher posé dans `_dose` (la D2 de l'audit d'optimisation, simulée) — un, la garde du
+plancher seule : aucune autre ne le voyait.
+
+**Tout le reste**, relancé : `./tools/run_suites.sh` entièrement vert — « tout passe, sans erreur de script » (29 min 56 s, la machine partagée avec les
+bancs d'image) ; `planche_q42` (le capteur du corps sous la torche d'en face, à mi-portée : dix classes × cinq orientations × les deux
+porteurs) : **les cent prises d'OM1 lisent 0,4358 (max 0,5647), vue croisée comme capteur de soi** ; la base, arrêtée après
+treize prises sous la charge des bancs du bot, est identique au dix-millième sur ces treize — le culling ne peut pas toucher ce
+capteur (Q42 : un corps ignore sa propre étoile, et le porteur n'ombre pas sa propre torche). `banc_equite` : inchangé (B
+équitable sur les six cartes, garde (4) tenue) — il ne lit ni lumière ni ombre de corps. **`banc_perception_bot`**, sur les huit familles où une autre source que sa propre torche éblouit le bot — la torche de
+la cible (devant lui, derrière un mur, hors du cadre, derrière un muret), les éclairs de la cible et du bot, la fusée (devant
+lui, derrière un mur) —, base puis OM1 : l'accord du modèle avec le capteur passe de **34 à 44 prises sur 55 (62 → 80 %)**, et
+toute la différence est sous la fusée — elle éblouissait le bot, qui perdait alors le corps qu'elle éclaire (0 sur 10) : il les
+voit (10 sur 10). Les 45 autres prises sont identiques une à une, et le capteur de la cible l'est partout (le culling ne le
+touche pas). **Malhonnêteté : zéro prise, avant comme après** (le modèle ne voit jamais un corps que le capteur laisse noir).
+C'est la lecture que la matrice laissait supposer : le bot ébloui par une autre source garde le corps de sa cible. Les autres
+familles (le noir, le cône et le halo du bot, les LED, les plafonniers) n'allument aucune source qui éblouisse le bot, sinon sa
+propre torche (le cône) — qui n'effaçait déjà pas le corps (0,648, au-dessus du seuil de 0,5) : elles n'ont pas été rejouées.
+
+**Version** : ce que chacun voit de l'autre change (sa propre torche ne l'efface plus, une fusée non plus), et le bot avec :
+**mineure** — le critère des réponses du 29/09, « l'équité, pas la taille du changement ». Rien de neuf ne voyage, et
+`Protocol.VERSION` n'est pas touché ici : comme pour Q42, la session qui publie le pose. ⚠️ **Sans lui, un joueur à jour et un
+joueur en 0.8.x se rencontreraient sans s'effacer l'un l'autre selon la même règle** — l'un verrait l'autre plein sous sa propre
+torche, l'autre à 0,648. La v17 a été montée pour moins (« un v16 face à un v17 ne verrait pas la même lampe ») ; et la v19 est
+publiée depuis la 0.8.0, quoi qu'en dise encore son entrée dans `protocol.gd` (« Non publiée » : périmé, signalé).
+
+**Non prouvé.** Rien sous Metal, ni en partie jouée (H16). Aucune partie EN LIGNE : la branche client est exercée dans le même
+processus, le mode basculé le temps d'un appel — ni le délai réel entre le tir (RPC) et son pic (`net_dazzle`), ni la tenue de
+0,1 s contre une vraie gigue. Et une limite, connue : la règle d'atteinte d'un éclair est la même des deux côtés, les positions non — à la limite de
+portée, ou au ras d'un mur, client et hôte peuvent en juger autrement ; le client note alors un tireur dont le pic n'arrive
+pas (au pire 0,1 s où ce tireur porte l'éblouissement d'autre chose), ou reçoit un pic sans en connaître le tireur (le corps
+qui tire peut ne pas s'effacer pour ce pic-là). Le halo qui retombait sur l'adversaire chez le client est lu dans le code, pas vu. La matrice et les
+boss ne mesurent qu'un joueur type.
+
+**Signalé, pas corrigé.** L'appareil de brouillage et le voile lisent toujours la gagnante de l'image (`source_eblouissante`),
+pas la source qui tient le niveau : pendant une redescente que plus rien ne tient, ils retombent sur l'adversaire
+(`source_eblouissante_ou`) — jusqu'à 0,375 s de halo sur sa position après une fusée, chez l'hôte comme chez le client. Le même
+défaut que le 2026-09-09, bref. Le geste tiendrait en une ligne (`source_eblouissante_ou` lirait `source_du_brouillage`), mais il
+change ce que l'appareil montre pendant chaque redescente et après chaque tir : **Q89**. Et au repos, sa propre torche (0,06) allume toujours
+l'appareil à chaque image — le flou, sa copie d'écran, le halo : le plancher de Q81 n'a été posé que pour le corps, comme Q81 le
+disait ; l'étendre à l'appareil est la D2 de l'audit d'optimisation, à trancher avec Q89.
+
+### OM1 — préparé le 2026-10-04 (le culling seul ; livré le lendemain, ci-dessus)
 
 **Ce qui est prêt** : le correctif, ses gardes et ses planches, dans `docs/iso/ombres/om1/` — `om1_culling.patch` (à appliquer
 avec `git apply`, sur `7ae8575c` ou après), `planche_culling.jpg`, `planche_brouillage.jpg`, `mesures.json`. **Aucun code du jeu
@@ -34182,8 +34343,8 @@ de cette branche ne le porte** : sans Q81, le sol désormais éclairé transpara
 - **Ce que le culling fait au brouillage**, sans y toucher (opacités inchangées, 0,648 et 0,053) : torche seule, le PNJ se tient
   sur un sol éclairé qui transparaît à travers lui ; ébloui, l'encoche noire de son étoile — qui le trahissait encore alors que
   son corps était effacé — disparaît. Le culling rend l'éblouissement plus fort qu'aujourd'hui : voir Q81.
-- **Pour livrer, Q81 tranchée** : appliquer le correctif, écrire le brouillage selon la réponse, relancer ce que la liste
-  d'OM1 nomme (`test_ombre_propre`, `test_halo_proximite`, `test_brouillage`, `test_eblouissement`, `test_tir_et_reserves`,
+- ~~**Pour livrer, Q81 tranchée**~~ *(fait le 2026-10-05, ci-dessus)* : appliquer le correctif, écrire le brouillage selon la
+  réponse, relancer ce que la liste d'OM1 nomme (`test_ombre_propre`, `test_halo_proximite`, `test_brouillage`, `test_eblouissement`, `test_tir_et_reserves`,
   `test_iso_equite` ; `planche_q42`, `banc_perception_bot`, `banc_equite` ; la planche d'OM0), et la matrice du bot si Q81 touche
   sa perception.
 
@@ -34361,7 +34522,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. Depuis le 2026-09-11, `functions deploy report` emporte AUSSI le tamis `parseGadgets` de la télémétrie des gadgets (PE5, étape 28 des dix classes, lot E) — sans migration : le bloc voyage dans les conditions ; sans redéploiement, il tombe au tamis sans rien refuser. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
 | H15 | **Décider de la vue isométrique** (étude ISO0, `docs/ETUDE_ISO.md`) | Go / no-go, ou « l'iso pour les vitrines, la vue de dessus pour le duel » ; tangage, lacet, hauteur des murs, écran scindé — après le banc ISO0.b et trois relevés de cadence au premier plan, que seul Adrien peut prendre. C'est un choix d'identité visuelle, pas une mesure. | ✅ **Tranché le 2026-09-14 : go** — tangage 52°, écran scindé en iso, caméra qui garde la profondeur, murs hauts et murs bas (mécanique neuve à instruire). Détail : section ISO, « H15 tranché » |
 | H-MB0 | **Jouer le prototype des murs bas et fixer les valeurs** (chantier MURS BAS, `docs/MURS_BAS.md`) | Aucune suite ne dit si une bande d'ombre de 3 tuiles se lit, si 1,5 tuile de cachette est juste, ni si l'accroupi à ×0,45 est jouable. Le prototype prouve les règles au pixel ; il ne dit pas si elles sont bonnes. | ✅ **Tranché le 2026-09-14** — mur bas 0,40, accroupi 0,10, α 13,5°, accroupi ×0,25 ; six règles validées ; dessin gardé ; enjambement à la vitesse accroupie ; MB1 ouverte |
-| H16 | **Jouer le solo après OM1 : l'ombre part-elle de derrière le PNJ, les PNJ sont-ils pleins ?** (chantier OMBRES) | Les planches du banc des ombres sont prises sous llvmpipe, pas sous le pilote d'Apple, et aucune suite ne dit si une ombre « se lit » ni si l'image ondule encore en jouant. Aucune mesure demandée sur le Mac (décision du 2026-09-30) : salles 0.1 et 0.9, puis un duel, et un mot. | Après OM1 (qui attend Q81) |
+| H16 | **Jouer le solo après OM1 : l'ombre part-elle de derrière le PNJ, les PNJ sont-ils pleins ?** (chantier OMBRES) | Les planches du banc des ombres sont prises sous llvmpipe, pas sous le pilote d'Apple, et aucune suite ne dit si une ombre « se lit » ni si l'image ondule encore en jouant. Aucune mesure demandée sur le Mac (décision du 2026-09-30) : salles 0.1 et 0.9, puis un duel, et un mot. | OM1 livré le 2026-10-05 : à jouer |
 
 ---
 

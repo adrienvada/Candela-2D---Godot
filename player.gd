@@ -89,9 +89,35 @@ var dazzle_amount: float = 0.0
 ## pendant qu'une lumière posée brûle derrière — et rien ne le verrait, aucune
 ## suite ne teste le relèvement.
 ##
-## Posé par l'hôte dans `game_state._maj_eblouissement`. **Non répliqué** : le
-## voile n'est affiché qu'en écran scindé, où les deux joueurs sont locaux.
+## Posé par l'hôte dans `game_state._maj_eblouissement` (`retenir_la_source`). **Non
+## répliqué**.
+## OMBRES, OM1 (Q81, 2026-10-05) — et chez un CLIENT en ligne, posé pour son seul joueur
+## local, par la même passe : le client ne calcule toujours pas l'éblouissement (l'hôte le
+## réplique, `net_dazzle`), mais il en calcule la SOURCE, avec les mêmes fonctions — rien de
+## neuf ne voyage sur le fil. ⚠️ **Jusque-là le client ne la connaissait jamais** : chez lui
+## l'appareil de brouillage et le voile retombaient toujours sur l'adversaire
+## (`game_state.source_eblouissante_ou`), si bien qu'une fusée qui l'aveuglait allumait le
+## halo du brouillage sur la position de l'autre — le défaut corrigé chez l'hôte le
+## 2026-09-09, que le client gardait faute de source.
 var source_eblouissante: Node2D = null
+
+## OMBRES, OM1 (Q81) — la source qui TIENT le niveau d'éblouissement de ce joueur : c'est le corps que son brouillage efface
+## (`source_du_brouillage`). Ce n'est pas toujours la gagnante de l'image (`source_eblouissante`) :
+##   • quand l'éblouissement redescend au-dessus du plafond de l'image, ce qui reste dans ses yeux vient de celle qui l'y a mis,
+##     qu'elle se soit éteinte, détournée, ou qu'une autre tienne désormais un plafond plus bas ;
+##   • un flash de bouche (`apply_dazzle`, `noter_la_source_du_pic`) nomme son tireur : son pic passe par-dessus le plafond et
+##     s'y résorbe en un peu plus de deux dixièmes de seconde.
+## Elle ne revient à la gagnante que lorsque l'éblouissement est retombé au plafond (`retenir_la_source`). Sans cette mémoire,
+## un tireur noté une fois restait la source de toute redescente suivante : l'adversaire s'effaçait pendant que se dissipait
+## l'éblouissement d'une fusée.
+var _source_du_niveau: Node2D = null
+## Ce qu'il reste de la tenue d'un tir noté (secondes) : pendant `TENUE_DU_TIR`, la source reste le tireur même si son pic ne
+## s'est pas encore montré. Chez le client, le tir arrive par un RPC et le pic par `net_dazzle`, synchronisé à 30 Hz : sans
+## tenue, la passe de l'image suivante rendait la source aux lampes avant que le pic n'arrive. Chez l'hôte le pic est immédiat,
+## la tenue ne change rien ; une seule règle des deux côtés.
+var _tenue_du_tir := 0.0
+## Trois intervalles de synchronisation de `net_dazzle` (30 Hz), moins que la résorption d'un pic à bout portant (0,225 s).
+const TENUE_DU_TIR := 0.1
 
 var current_ammo: int = 10
 var is_reloading: bool = false
@@ -945,8 +971,8 @@ func _ready():
 		
 	if has_node("LightOccluder2D"):
 		var main_occ = get_node("LightOccluder2D")
-		main_occ.occluder.polygon = pts
-		main_occ.occluder.cull_mode = OccluderPolygon2D.CULL_DISABLED
+		# OMBRES, OM1 — l'occulteur de l'étoile, par la charte (culling, ressource neuve), même pour ce cercle provisoire.
+		main_occ.occluder = Charte.occulteur_d_etoile(pts)
 		# Une couche par joueur : c'est ce qui permet à une torche d'ombrer
 		# l'autre corps sans ombrer le sien. Voir `flashlight.shadow_item_cull_mask`.
 		main_occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE
@@ -1160,10 +1186,8 @@ func _accorder_occluder_a_la_silhouette(sil: Texture2D) -> void:
 	# et J2 la PARTAGEAIENT, et dans un match entre deux classes les deux corps
 	# projetaient l'ombre de la classe équipée en dernier — le leurre, lui, celle
 	# de son poseur, et il se trahissait. Trouvé en revue (2026-09-11).
-	var poly := OccluderPolygon2D.new()
-	poly.polygon = pts
-	poly.cull_mode = OccluderPolygon2D.CULL_DISABLED
-	occ.occluder = poly
+	# OMBRES, OM1 — la ressource et son culling viennent de la charte, comme pour le leurre (`Charte.occulteur_d_etoile`).
+	occ.occluder = Charte.occulteur_d_etoile(pts)
 	occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE
 
 
@@ -1986,10 +2010,15 @@ func _physics_process(delta):
 	# `visual_enemy` est ce corps-ci tel que l'AUTRE le voit : c'est donc le
 	# dazzle de l'autre qui décide s'il le distingue. Prendre le sien inverserait
 	# l'effet — on s'effacerait soi-même en éblouissant quelqu'un.
+	#
+	# OMBRES, OM1 (Q81, décision d'Adrien, 2026-10-05) — **et seulement s'il EST la
+	# source de cet éblouissement**, de ce qui dépasse la rétrodiffusion de 0,06
+	# (`Brouillage.opacite_vue`). Avant, tout ennemi s'effaçait dès que le regardeur
+	# était ébloui, par n'importe quoi — sa propre torche comprise.
 	if state != null and visual_enemy != null:
 		var regardeur: Node = state.p2 if player_id == 0 else state.p1
 		if is_instance_valid(regardeur):
-			var a := Brouillage.opacite(float(regardeur.dazzle_amount))
+			var a := Brouillage.opacite_vue(float(regardeur.dazzle_amount), regardeur.source_du_brouillage() == self)
 			_alpha_brouillage = a
 			visual_enemy.modulate.a = a
 			if visual_enemy_ptr != null:
@@ -3428,8 +3457,10 @@ func add_camera_shake(intensity: float, decay: float = 5.0):
 
 ## Pic instantané — le flash de tir. Peut dépasser le plafond de la torche : le
 ## modèle le résorbe ensuite, c'est voulu.
-func apply_dazzle(amount: float):
+func apply_dazzle(amount: float, source: Node2D = null):
 	dazzle_amount = min(1.0, dazzle_amount + amount)
+	if source != null:
+		noter_la_source_du_pic(source)
 
 ## Une image d'éblouissement, appelée par `game_state` et JAMAIS d'ici.
 ##
@@ -3439,6 +3470,31 @@ func apply_dazzle(amount: float):
 ## l'un, la descente dans l'autre.
 func integrer_eblouissement(plafond: float, delta: float) -> void:
 	dazzle_amount = Eblouissement.integrer(dazzle_amount, plafond, delta)
+
+
+## OMBRES, OM1 (Q81) — après chaque image d'éblouissement, la gagnante de l'image et son plafond : appelée par
+## `game_state._maj_eblouissement`, chez l'hôte après l'intégration, chez un client en ligne sur l'éblouissement que l'hôte
+## réplique (sans y toucher). Pose `source_eblouissante` (le voile, l'appareil de brouillage), et ne rend la source du NIVEAU
+## à la gagnante que lorsque l'éblouissement est retombé à son plafond — voir `_source_du_niveau`.
+func retenir_la_source(gagnante: Node2D, plafond: float, delta: float) -> void:
+	source_eblouissante = gagnante
+	_tenue_du_tir = maxf(0.0, _tenue_du_tir - delta)
+	if _tenue_du_tir <= 0.0 and dazzle_amount <= plafond + 0.001:
+		_source_du_niveau = gagnante
+
+
+## OMBRES, OM1 (Q81) — le tireur dont le flash atteint ce joueur : chez l'hôte avec son pic (`apply_dazzle`), chez un client en
+## ligne seul (le pic arrive par `net_dazzle`).
+func noter_la_source_du_pic(tireur: Node2D) -> void:
+	_source_du_niveau = tireur
+	_tenue_du_tir = TENUE_DU_TIR
+
+
+## OMBRES, OM1 (Q81, décision d'Adrien, 2026-10-05) — le corps que l'éblouissement de CE joueur efface à ses yeux : la source
+## qui tient son niveau (`_source_du_niveau`) — un corps, une fusée, un gadget, ou lui-même (sa propre torche). Seul un corps
+## qui EST cette source s'efface (`Brouillage.opacite_vue`), et le bot n'en perd pas d'autre (`PerceptionBot.corps_distinct`).
+func source_du_brouillage() -> Node2D:
+	return _source_du_niveau if is_instance_valid(_source_du_niveau) else null
 
 func _calculate_uvs(poly: Polygon2D):
 	if poly.polygon.size() == 0: return

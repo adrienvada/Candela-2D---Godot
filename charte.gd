@@ -1069,6 +1069,28 @@ static func ombre_de_silhouette(sil: Texture2D) -> PackedVector2Array:
 	return pts
 
 
+## OMBRES, OM1 — l'OCCULTEUR de l'étoile d'un corps (le joueur, chaque PNJ, le leurre) : la forme d'`ombre_de_silhouette`
+## dans une ressource NEUVE, en `CULL_COUNTER_CLOCKWISE`. Une seule fonction, pour que le leurre fasse toujours le même trou.
+##
+## Avec `CULL_DISABLED`, chaque arête de l'étoile jetait son ombre, celles tournées vers la lampe comprises : l'intérieur de
+## l'étoile, côté lampe, restait noir — une encoche devant les pieds du corps, en vue iso, que la sonde du banc des ombres lit
+## à 0,000 dans vingt-sept plans (OM0 ; le sol juste dehors : 0,22 à 0,32). Le culling ne garde que les arêtes tournées DOS à
+## la lampe : l'ombre part de derrière le corps, le sol devant ses pieds est éclairé (prototype mesuré au banc : 0,24 à 0,39).
+##
+## ⚠️ **Le sens d'enroulement fait la moitié de la règle.** L'étoile tourne avec une aire signée POSITIVE dans le repère y-bas
+## du monde (`Geometry2D.is_polygon_clockwise` dit non) ; retournée, le même culling ferait l'inverse — l'ombre devant le corps,
+## son dos éclairé. `test_ombre_propre` garde les deux, sur les vingt étoiles et le leurre.
+## ⚠️ **Le capteur du corps ne voit pas sa propre étoile** (Q42) : ce culling ne change rien à ce que le corps lit de sa lumière
+## (au banc : 0,558 avant comme après). Il change ce que les AUTRES voient : le sol autour de lui, et ce qu'un corps délavé par
+## le brouillage laisse voir du sol désormais éclairé — d'où Q81, livrée avec lui : seul le corps qui éblouit s'efface
+## (`Brouillage.opacite_vue`).
+static func occulteur_d_etoile(forme: PackedVector2Array) -> OccluderPolygon2D:
+	var poly := OccluderPolygon2D.new()
+	poly.polygon = forme
+	poly.cull_mode = OccluderPolygon2D.CULL_COUNTER_CLOCKWISE
+	return poly
+
+
 ## Le rayon du disque de TORSE, celui qui arrête la rétrodiffusion.
 ##
 ## ⚠️ **12, et le nombre n'est pas libre.** La lampe de rétrodiffusion est posée à

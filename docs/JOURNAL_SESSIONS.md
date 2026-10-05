@@ -6201,3 +6201,20 @@ l'a renommée ; même session, même branche) ; `ListAgents` toujours vide.
 la ligne du recul dans le bloc de la torche de `_physics_process` (`_energie_torche = _enveloppe_de_recul()`, à la place du
 `randf_range`). Après une fusion : `grep -n "_enveloppe_de_recul\|energie_de_recul" player.gd` doit répondre trois fois au moins,
 et `grep -c "randf_range(1.5, 2.0)" player.gd` zéro.
+
+**OM1, le 2026-10-05 — annoncé ici avant le commit :** le culling préparé la veille, appliqué tel quel — `charte.gd`
+(`occulteur_d_etoile`, nouvelle), `gadget_leurre.gd` (`_poser_occluder` passe par elle), `player.gd` (les deux affectations de
+l'occulteur de l'étoile) — et le brouillage par la source (Q81, tranchée par Adrien le même jour) : `brouillage.gd` (`PLANCHER`,
+`opacite_vue`, nouvelles, après `opacite`) ; `player.gd` (`_source_du_niveau`, `_tenue_du_tir`, `TENUE_DU_TIR` sous
+`source_eblouissante` ; `apply_dazzle` prend une source ; `retenir_la_source`, `noter_la_source_du_pic`, `source_du_brouillage`
+après `integrer_eblouissement` ; le bloc du brouillage de `_physics_process` lit `opacite_vue`) ; `game_state.gd`
+(`_maj_eblouissement` ne sort plus chez le client : il y fait sa passe 1 pour son joueur ; la passe 2 appelle `retenir_la_source`
+au lieu de poser `source_eblouissante` ; `_flash_de_tir` note le tireur chez le client ; `_pic_du_flash`, nouvelle) ;
+`perception_bot.gd` (`corps_distinct` prend `est_la_source`) ; `perception_bot_noeud.gd` (`monde["ebloui_par_la_cible"]`).
+Outils : `tools/test_ombres_regles.gd` (la section OM1), `tools/test_ombre_propre.gd` (le culling attendu),
+`tools/test_aventure_boss.gd` (deux vérifications réécrites à Q81, quatre ajoutées), `tools/photographe.gd` (le plan
+« eblouissement » nomme J2). Après une fusion : `grep -n "opacite_vue\|source_du_brouillage\|retenir_la_source" *.gd` doit répondre
+dans `brouillage.gd`, `player.gd`, `game_state.gd`, `perception_bot.gd` et `perception_bot_noeud.gd`, et
+`grep -c "CULL_COUNTER_CLOCKWISE" charte.gd` au moins une fois. ⚠️ Qui écrit encore `cible.source_eblouissante = …` à la main après
+une fusion contourne la source du niveau : passer par `retenir_la_source`. La session s'appelle désormais `candela-2d-godot-40`
+dans `ListAgents` (un redémarrage de plus ; même session, même branche) ; `ListAgents` toujours vide.
