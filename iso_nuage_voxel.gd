@@ -497,6 +497,8 @@ static func materiau(type: String, vue_id: int, voxel: float, hauteur_px: float,
 	mat.set_shader_parameter("temperature", IsoMateriaux.TEMPERATURE if IsoMateriaux.beaute_active() else 0.0)
 	mat.set_shader_parameter("temperature_seuil_bas", 0.0)
 	mat.set_shader_parameter("temperature_seuil_haut", 0.0)
+	# Chantier RR, RR2 — la lumière peinte, comme le sol et les murs qu'elle recouvre (`IsoMateriaux.courbe_lumiere`).
+	mat.set_shader_parameter("courbe", IsoMateriaux.courbe_lumiere())
 	# GV2 — une nappe ne coule pas : ni la respiration de ses cubes, ni la dérive de son dessin ; ses colonnes prennent leur
 	# part de hasard (`grain`). Posés pour tous, nuages compris : un réglage se lit sur le matériau, jamais sur un défaut.
 	var nappe := est_nappe(type)

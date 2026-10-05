@@ -202,6 +202,47 @@ vec3 pate_temperature_graduee_neutre(vec3 c, float force, float seuil_bas, float
 	return chaude * (l / max(pate_luminance(chaude), 0.000001));
 }
 
+// Chantier RR, RR2 — LA LUMIÈRE PEINTE (Adrien, 2026-10-05 : « plus réaliste, plus fluide, plus oppressant », Hadès pour
+// référence). La brute rend une lumière juste mais plate : la flaque d'un plafonnier presque uniforme, le cône d'une torche
+// d'un ambre terne, sans point chaud près de la lampe. La courbe relève les mi-tons et les cœurs, et pâlit le cœur vers le
+// blanc — que la température, posée juste après, réchauffe : un foyer, puis l'ambre, puis la braise, puis le noir.
+// ⚠️ ESPACE : la luminance de l'octet ÉCRIT, celle de `c` même — PAS la « valeur affichée » d'ISO7 (`pate_vers_affiche`),
+// qui est la lumière linéaire : son nom vient d'un relevé où une encre de 0,25 menait 28/255 à 1/255, et c'était le point
+// noir de la sortie 3D (28 × 0,25 = 7, affiché 0 à 1 ; piège du 2026-09-25), pas un décodage. Mesuré le 2026-10-05 : le sol
+// rendu à 0,5 se relit 128/255 (photographe, plan `torche`). Posée d'abord sur la valeur décodée, la courbe ne touchait
+// presque rien : son pied de 0,06 tombait à ~70/255, au-dessus de neuf pixels allumés sur dix.
+// ⚠️ INVARIANT : sous `PATE_COURBE_PIED` (15/255 écrit, près de deux fois le point noir écrit de 8/255 ; ~9/255 à l'écran,
+// après la courbe de la sortie 3D), la lumière est rendue TELLE QUELLE — la lueur faible, l'information du jeu, ne bouge
+// pas, et aucun pixel n'entre ni ne sort du noir. Au-dessus, la luminance ne fait que monter, et en croissant avec la lumière
+// reçue (force ≤ 1) ; la teinte ne bouge pas (un seul facteur, plafonné au blanc : une couleur affichable le reste, une
+// couleur qui dépassait le blanc n'est pas relevée) ; 0 → 0 ; force 0 → `c` inchangée. Le cœur pâlit vers SA luminance
+// (elle ne change pas), et seulement pour une lumière neutre (`pate_poids_neutre`, la règle de la température) : la fusée
+// rouge, le carmin et les LED gardent leur teinte. Posée après la matière, juste avant la température (sol, murs et leurs
+// variantes éclairées, fumée). Miroir : `IsoPate.courbe`.
+const float PATE_COURBE_PIED = 0.06;
+const float PATE_COURBE_GENOU = 0.35;
+const float PATE_COURBE_BLANC = 0.6;
+
+vec3 pate_courbe(vec3 c, float force) {
+	float k_max = clamp(force, 0.0, 1.0);
+	if (k_max <= 0.0) {
+		return c;
+	}
+	float s = pate_luminance(c);
+	if (s <= PATE_COURBE_PIED) {
+		return c;
+	}
+	float k = k_max * smoothstep(PATE_COURBE_PIED, PATE_COURBE_GENOU, s);
+	float s2 = s + k * s * max(1.0 - s, 0.0);
+	// Le relèvement : un seul facteur pour les trois composantes (la teinte ne bouge pas), plafonné là où la plus forte
+	// touche le blanc ; une couleur qui le dépassait déjà n'est pas relevée.
+	float plafond = max(1.0 / max(c.r, max(c.g, c.b)), 1.0);
+	vec3 c2 = c * clamp(s2 / s, 1.0, plafond);
+	// Le cœur pâlit vers sa propre luminance, sans la changer — ni le blanc ni la luminance ne bougent après le relèvement.
+	float l2 = pate_luminance(c2);
+	return mix(c2, vec3(l2), 0.5 * k_max * smoothstep(PATE_COURBE_BLANC, 1.0, l2) * pate_poids_neutre(c));
+}
+
 // L'encre des arêtes d'une BOÎTE, quelle que soit la façon dont elle est construite — cube unité
 // mis à l'échelle (les murs) ou `BoxMesh` à sa vraie taille sous une échelle identité (les voxels,
 // jambes comprimées en Y à l'accroupi) — et quelle que soit sa rotation (un corps tourne) :

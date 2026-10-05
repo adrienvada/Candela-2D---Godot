@@ -621,6 +621,7 @@ run test_fumee_voxel_drapeaux --script "res://tools/test_fumee_voxel.gd" -- --fu
 run test_nappes_voxel_braises --script "res://tools/test_nappes_voxel.gd" -- --nappes-voxels=braises
 # RR1 — l'essai sans encre, lu au lancement (`--sans-encre`) : l'encre part, la matière reste ; il l'emporte sur `--encre-essai`.
 run test_rendu_rr_sans_encre --script "res://tools/test_rendu_rr.gd" -- --sans-encre --encre-essai
+run test_rendu_rr_sans_courbe --script "res://tools/test_rendu_rr.gd" -- --sans-courbe
 run test_netcode res://tools/test_netcode.tscn
 # Une scène et non un --script : player.gd s'appuie sur des autoloads que le mode
 # --script ne déclare pas à la compilation (voir l'en-tête du test).

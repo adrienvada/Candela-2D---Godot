@@ -241,6 +241,7 @@ static func accorder_mur(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("encre_plancher_affiche", ENCRE_PLANCHER_AFFICHE)
 	materiau.set_shader_parameter("lisere_sommet_px", LISERE_SOMMET_PX if active else 0.0)
 	materiau.set_shader_parameter("temperature", (TEMPERATURE_GRADUEE if active else 0.0))
+	materiau.set_shader_parameter("courbe", courbe_lumiere())
 	materiau.set_shader_parameter("temperature_seuil_bas", TEMPERATURE_SEUIL_BAS)
 	materiau.set_shader_parameter("temperature_seuil_haut", TEMPERATURE_SEUIL_HAUT if active else 0.0)
 	materiau.set_shader_parameter("neutre_avant_pate", 1.0 if active else 0.0)
@@ -380,6 +381,24 @@ const TEMPERATURE_GRADUEE := 0.8
 const TEMPERATURE_SEUIL_BAS := 0.08
 const TEMPERATURE_SEUIL_HAUT := 0.45
 
+## Chantier RR, RR2 — LA LUMIÈRE PEINTE (`pate_courbe`, `iso_pate.gdshaderinc`) : la force de la courbe sur le sol, les murs et
+## la fumée, juste avant la température. Sous son pied (luminance ÉCRITE 0,06, soit 15/255 — ~9/255 à l'écran), rien ne bouge
+## — la lueur faible et le noir ; au-dessus, les mi-tons et les cœurs relevés, le cœur pâli vers le blanc chaud. Éteinte sans beauté,
+## comme la température. `--sans-courbe` : la brute de RR1, pour comparer. `--courbe=<force>` (build de débogage) : les planches.
+const COURBE_LUMIERE := 0.6
+const DRAPEAU_SANS_COURBE := "--sans-courbe"
+const DRAPEAU_COURBE := "--courbe="
+
+
+static func courbe_lumiere() -> float:
+	if not beaute_active() or DrapeauxDeLancement.present(DRAPEAU_SANS_COURBE):
+		return 0.0
+	if OS.is_debug_build():
+		for a: String in DrapeauxDeLancement.arguments():
+			if a.begins_with(DRAPEAU_COURBE) and a.trim_prefix(DRAPEAU_COURBE).is_valid_float():
+				return clampf(a.trim_prefix(DRAPEAU_COURBE).to_float(), 0.0, 1.0)
+	return COURBE_LUMIERE
+
 ## ISO7b — la face prend la direction de la lumière (`mur_iso.gdshader`, gradient de la lightmap devant elle).
 ## Plancher 0,4 : une face de profil garde 40 % de la lumière qu'elle reçoit, pour rester lisible (brief :
 ## 0,35 à 0,45). Pas d'une tuile : le gradient se lit à l'échelle d'une tuile, pas du grain de la lightmap.
@@ -433,6 +452,7 @@ static func accorder_sol(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("temperature_seuil_bas", TEMPERATURE_SEUIL_BAS)
 	materiau.set_shader_parameter("temperature_seuil_haut", TEMPERATURE_SEUIL_HAUT if active else 0.0)
 	materiau.set_shader_parameter("neutre_avant_pate", 1.0 if active else 0.0)
+	materiau.set_shader_parameter("courbe", courbe_lumiere())
 	materiau.set_shader_parameter("dalles", 1.0 if active else 0.0)
 	materiau.set_shader_parameter("tuile_px", float(CandelaTileSet.TILE_SIZE.x))
 	materiau.set_shader_parameter("joint_2d_px", 1.0)

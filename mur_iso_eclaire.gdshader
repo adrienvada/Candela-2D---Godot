@@ -138,6 +138,8 @@ uniform float temperature_seuil_haut : hint_range(0.0, 1.0) = 0.0;
 // ISO7b — 1 : la neutralité qui dose la chaleur se lit sur la lightmap AVANT la pâte (`pate_poids_neutre`), et une
 // lumière colorée garde sa teinte. 0 : mesurée après la pâte, comme au commit db26c43 (le halo de fusée jaunissait).
 uniform float neutre_avant_pate : hint_range(0.0, 1.0) = 0.0;
+// Chantier RR, RR2 — la lumière peinte (`pate_courbe`, `iso_pate.gdshaderinc`) : sa force ; 0, la lumière telle quelle.
+uniform float courbe : hint_range(0.0, 1.0) = 0.0;
 
 // La grille des murs : R = mur haut, G = muret ; un texel par tuile, bordure comprise.
 uniform sampler2D grille_murs : filter_nearest, repeat_disable;
@@ -356,6 +358,8 @@ void fragment() {
 	// LE PRINCIPE D'IDENTITÉ : la température de `mur_iso.gdshader`, ligne pour ligne ; l'ancien chemin n'en avait pas (« la
 	// couleur de la lumière est celle de la Light3D »), et la face chaude en 2D sortait grise.
 	if (identite_2d) {
+		// Chantier RR, RR2 — la lumière peinte, avant la température, sur l'octet : rien ne bouge sous le pied.
+		c = pate_courbe(c, courbe);
 		if (temperature_seuil_haut <= 0.0) {
 			c = pate_temperature(c, temperature);
 		} else if (neutre_avant_pate > 0.5) {
