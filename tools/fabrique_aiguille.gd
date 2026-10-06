@@ -22,8 +22,9 @@ extends SceneTree
 ## sont blancs, teintés par `modulate` : une seule teinte par objet. L'aiguille en demande trois le long d'un même trait
 ## (blanc, ambre, carmin), qu'aucun `modulate` ne peut donner. `bullet.gd` la pose donc avec un `modulate` neutre.
 ##
-## ⚠️ **Encrée, comme tout masque de jeu** (refonte roman graphique, lot 1) : l'opacité sort de la cuisson en dégradé,
-## puis `EncrerMasques.encrer` la ramène à trois paliers (`PALIERS`). `tools/test_encrage.gd` refuse tout fichier de
+## ⚠️ **Deux fichiers, comme tout masque d'effet depuis RR5.** Le jeu charge le jumeau FONDU (`CHEMIN_FONDU`, l'opacité en
+## dégradé, telle que la cuisson la sort) ; le masque ENCRÉ (`CHEMIN`) reste celui de `--sans-fondu` et de l'encre :
+## `EncrerMasques.encrer` y ramène l'opacité à trois paliers (`PALIERS`). `tools/test_encrage.gd` refuse tout fichier de
 ## `assets/decals/` au-dessus de 25 % de « part molle » — la première cuisson, lisse, y a rougi (0,84). La COULEUR,
 ## elle, garde son dégradé de feu : l'encrage ne touche que l'alpha.
 ##
@@ -35,6 +36,9 @@ const Charte_ := preload("res://charte.gd")
 const Encre := preload("res://tools/encrer_masques.gd")
 
 const CHEMIN := "res://assets/decals/aiguille.png"
+## Le jumeau FONDU que le jeu charge (chantier RR, RR5 : les effets en jeu passent du palier au fondu, `IsoMateriaux.masque_d_effet`) ;
+## le masque encré ci-dessus reste celui de `--sans-fondu` et de `test_encrage`.
+const CHEMIN_FONDU := "res://assets/fondu/decals/aiguille.png"
 const LARGEUR := 256   # texels, le long du trait
 const HAUTEUR := 20    # texels, en travers
 ## Ce que couvrent ces texels dans le monde, à la longueur de référence.
@@ -79,13 +83,18 @@ func _init() -> void:
 				continue
 			var c := somme / a
 			img.set_pixel(x, y, Color(minf(c.x, 1.0), minf(c.y, 1.0), minf(c.z, 1.0), a))
+	var err_fondu := img.save_png(ProjectSettings.globalize_path(CHEMIN_FONDU))
+	if err_fondu != OK:
+		printerr("fabrique_aiguille : écriture impossible (%d) — %s" % [err_fondu, CHEMIN_FONDU])
+		quit(1)
+		return
 	Encre.encrer(img, PackedFloat32Array(BORNES), PackedFloat32Array(PALIERS))
 	var err := img.save_png(ProjectSettings.globalize_path(CHEMIN))
 	if err != OK:
 		printerr("fabrique_aiguille : écriture impossible (%d) — %s" % [err, CHEMIN])
 		quit(1)
 		return
-	print("fabrique_aiguille : %s (%d × %d) écrite. Importer : godot --headless --path . --import" % [CHEMIN, LARGEUR, HAUTEUR])
+	print("fabrique_aiguille : %s et %s (%d × %d) écrites. Importer : godot --headless --path . --import" % [CHEMIN_FONDU, CHEMIN, LARGEUR, HAUTEUR])
 	quit(0)
 
 

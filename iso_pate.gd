@@ -166,6 +166,30 @@ static func temperature_graduee_neutre(c: Vector3, force: float, seuil_bas: floa
 	return chaude * (l / maxf(luminance(chaude), 0.000001))
 
 
+## Chantier RR, RR2 — miroir de `PATE_COURBE_*` et `pate_courbe` : la lumière peinte, sur la luminance de l'OCTET (`c`
+## même, jamais `vers_affiche`). Sous le pied, la lumière telle quelle ; au-dessus, les mi-tons et les cœurs relevés, le cœur
+## d'une lumière neutre pâli vers sa luminance. Luminance jamais plus basse, croissante, teinte gardée, 0 → 0, une couleur
+## affichable le reste, force 0 → inchangée.
+const COURBE_PIED := 0.06
+const COURBE_GENOU := 0.35
+const COURBE_BLANC := 0.6
+
+
+static func courbe(c: Vector3, force: float) -> Vector3:
+	var k_max := clampf(force, 0.0, 1.0)
+	if k_max <= 0.0:
+		return c
+	var s := luminance(c)
+	if s <= COURBE_PIED:
+		return c
+	var k := k_max * smoothstep(COURBE_PIED, COURBE_GENOU, s)
+	var s2 := s + k * s * maxf(1.0 - s, 0.0)
+	var plafond := maxf(1.0 / maxf(c.x, maxf(c.y, c.z)), 1.0)
+	var c2 := c * clampf(s2 / s, 1.0, plafond)
+	var l2 := luminance(c2)
+	return c2.lerp(Vector3(l2, l2, l2), 0.5 * k_max * smoothstep(COURBE_BLANC, 1.0, l2) * poids_neutre(c))
+
+
 ## ISO7 — miroir de `pate_trait_de_bord` : 1 sur le trait, 0 au-delà.
 static func trait_de_bord(distance: float, largeur: float, aa: float) -> float:
 	return 1.0 - smoothstep(largeur - aa, largeur + aa, distance)

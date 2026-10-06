@@ -156,8 +156,11 @@ func _les_reglages() -> void:
 		and is_equal_approx(float(ms.get_shader_parameter("temperature")), IsoMateriaux.TEMPERATURE if beaute else 0.0)
 		and float(ms.get_shader_parameter("temperature_seuil_bas")) == 0.0
 		and float(ms.get_shader_parameter("temperature_seuil_haut")) == 0.0)
-	_check("une nappe a l'encre et le relief de la fumée (les volutes, Q73 ; le relief du dessin), le même plancher",
-		int(mb.get_shader_parameter("encre_style")) == int(IsoNuageVoxel.ENCRES["volutes"])
+	# Chantier RR, RR3 — l'encre est l'exception (Q90 = (b), `IsoMateriaux.encre_active`, `--avec-encre`) : sans elle, « aucune »,
+	# comme la fumée qu'elle recouvre. `run_suites.sh` rejoue la fumée avec l'encre (`test_fumee_voxel_avec_encre`).
+	var encre_nappe := "volutes" if IsoMateriaux.encre_active() else "aucune"
+	_check("une nappe a l'encre et le relief de la fumée (%s, Q73 sous l'encre ; le relief du dessin), le même plancher" % encre_nappe,
+		int(mb.get_shader_parameter("encre_style")) == int(IsoNuageVoxel.ENCRES[encre_nappe])
 		and int(mb.get_shader_parameter("relief_style")) == int(IsoNuageVoxel.RELIEFS["dessin"])
 		and is_equal_approx(float(mb.get_shader_parameter("trait_plancher")), IsoMateriaux.ENCRE_PLANCHER_AFFICHE)
 		and mb.shader == ms.shader)

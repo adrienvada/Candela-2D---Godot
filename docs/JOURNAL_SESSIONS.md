@@ -6152,6 +6152,11 @@ peintes), `tools/photographe.gd` (deux légendes et un commentaire du plan « le
 `tools/run_suites.sh` (la suite, à pas fixe). **Pas touché, mais concerné** : `miroirs_iso.gd` et `iso_volumes.gd` lisent
 `Aura`, `Core`, `MuzzleFlash` et `EclatDessine` par leur nom — noms gardés ; `perception_bot_noeud.gd` lit le rayon vivant du flash.
 
+**Fusions de `main` dans la branche (2026-10-05 et 06)** : OMBRES (#8) puis RR2 à RR5 (#11). Pour RR5, l'aiguille a reçu son jumeau
+FONDU (`assets/fondu/decals/aiguille.png`, créé, écrit par la même fabrique) et passe par `IsoMateriaux.masque_d_effet` ; la garde RR5
+de `tools/test_rendu_rr.gd` (touché) lisait la traînée ronde, retirée : elle lit l'aiguille. Pour OMBRES, `tools/test_ombres_regles.gd`
+(touché, O10) vérifie la règle de l'écho retiré sur le flash et l'étoile.
+
 **Pour qui tient `player.gd` ailleurs** (le chantier OMBRES vise la lumière de coup, l'audit l'atlas des lumières) : après sa
 prochaine fusion, `grep etoile_de_bouche player.gd` et `grep _poser_le_flash player.gd`. Le grand flash porte `ECLAT` : il
 n'ajoute aucune texture à l'atlas.

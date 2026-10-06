@@ -1,0 +1,20 @@
+{
+ "plafonnier-brute": {
+  "sortis_du_noir": 246,
+  "dont_a_moins_de_100_px_d_une_source_vive": 233,
+  "luma_moyenne_des_sortis": 9.5,
+  "eteints": 140
+ },
+ "lumieres-salle09": {
+  "sortis_du_noir": 3197,
+  "dont_a_moins_de_100_px_d_une_source_vive": 3191,
+  "luma_moyenne_des_sortis": 12.5,
+  "eteints": 96
+ },
+ "brouillage-torche": {
+  "sortis_du_noir": 1585,
+  "dont_a_moins_de_100_px_d_une_source_vive": 1585,
+  "luma_moyenne_des_sortis": 11.1,
+  "eteints": 31
+ }
+}

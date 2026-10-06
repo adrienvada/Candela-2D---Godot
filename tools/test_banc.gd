@@ -339,7 +339,8 @@ func _run() -> void:
 	var paires := [
 		["sol_iso", "sol_iso_eclaire", ["float ton_du_sol(vec2 p)", "vec3 lightmap_pateuse_sol(vec2 p, vec2 motif, float aa, bool deux)",
 			"float contact_des_corps(vec2 p)"], "vec3 c2d = lightmap_pateuse_sol(px_lu, px, aa, deux);"],
-		["mur_iso", "mur_iso_eclaire", ["vec3 lightmap_pateuse_lue(vec3 c, vec2 motif, float aa)"],
+		# Chantier RR, RR3 — et la lueur des LED au pied des murs (Q90 = (b)), copiée à l'identique.
+		["mur_iso", "mur_iso_eclaire", ["vec3 lightmap_pateuse_lue(vec3 c, vec2 motif, float aa)", "vec3 lumiere_des_led(vec2 px, vec3 ref)"],
 			"identite_2d ? lightmap_pateuse_lue(brute, motif, aa)"],
 		["corps_iso", "corps_iso_eclaire", ["vec3 lumiere_du_capteur("], "c2d = min(pate(base2d, pate_luminance(base2d), style, motif, vec2(0.0), recue, aa), base2d);"],
 	]

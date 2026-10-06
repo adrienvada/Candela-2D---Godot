@@ -1,0 +1,182 @@
+[
+ {
+  "id": "R1",
+  "titre": "le miroir relit la valeur décodée (le premier câblage)",
+  "fichiers": [
+   "iso_pate.gd"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ un cœur de flaque à 100/255 monte d'au moins 20/255 (7.2) : la courbe agit sur l'octet  → une courbe posée sur la valeur décodée laisse ce gris en place"
+  ]
+ },
+ {
+  "id": "R2",
+  "titre": "le shader relit la valeur décodée",
+  "fichiers": [
+   "iso_pate.gdshaderinc"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ `pate_courbe` lit la luminance de l'octet, jamais la valeur décodée (`pate_vers_affiche`)"
+  ]
+ },
+ {
+  "id": "R3",
+  "titre": "le pied au niveau du noir (shader et miroir ensemble)",
+  "fichiers": [
+   "iso_pate.gd",
+   "iso_pate.gdshaderinc"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ le pied (0.020, 5.1/255 écrit) est au-dessus du point noir écrit (8/255), avec marge  → un pied au niveau du noir laisserait la courbe faire entrer ou sortir un pixel du noir"
+  ]
+ },
+ {
+  "id": "R4",
+  "titre": "le genou du shader dérive de celui du miroir",
+  "fichiers": [
+   "iso_pate.gdshaderinc"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ PATE_COURBE_GENOU du shader = celui du miroir (0.5)"
+  ]
+ },
+ {
+  "id": "R5",
+  "titre": "la courbe agit sous le pied (le relèvement part de 0)",
+  "fichiers": [
+   "iso_pate.gd"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ sous le pied, la lumière telle quelle : la lueur faible (l'information) et le noir ne bougent pas"
+  ]
+ },
+ {
+  "id": "R6",
+  "titre": "le blanchiment sans le poids de neutralité (la fusée pâlit)",
+  "fichiers": [
+   "iso_pate.gd"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ l'ambre des LED, vif (luminance 0.71), garde sa teinte (0.750 → 0.699)"
+  ],
+  "premier_passage": "vert (trou dans la garde, bouché : garde de l'ambre des LED)"
+ },
+ {
+  "id": "R7",
+  "titre": "un plafond par composante au lieu d'un facteur commun (la teinte bouge)",
+  "fichiers": [
+   "iso_pate.gd"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ la fusée rouge garde son rouge (écart de teinte 0.880 → 0.843)"
+  ]
+ },
+ {
+  "id": "R8",
+  "titre": "aucun plafond (le relèvement sort du blanc)",
+  "fichiers": [
+   "iso_pate.gd"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ une couleur affichable le reste : aucune composante poussée au-delà du blanc"
+  ]
+ },
+ {
+  "id": "R9",
+  "titre": "le sol pose la courbe APRÈS la température",
+  "fichiers": [
+   "sol_iso.gdshader"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ sol_iso.gdshader : `courbe` déclarée, appelée une fois, avant la température  → appel 9835, température -1",
+   "✗ sol : la température s'applique après la matière, et la courbe entre les deux  → 8739, 9835, 9224"
+  ]
+ },
+ {
+  "id": "R10",
+  "titre": "les murs n'appellent plus la courbe",
+  "fichiers": [
+   "mur_iso.gdshader"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ mur_iso.gdshader : `courbe` déclarée, appelée une fois, avant la température  → appel -1, température 3838"
+  ]
+ },
+ {
+  "id": "R11",
+  "titre": "accorder_mur oublie la courbe",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ les murs (par défaut : 0.60)",
+   "✗ les murs éclairés (par défaut : 0.60)"
+  ],
+  "premier_passage": "vert (trou dans la garde, bouché : réglage absent lu par _reglage)"
+ },
+ {
+  "id": "R12",
+  "titre": "la fumée oublie la courbe",
+  "fichiers": [
+   "iso_nuage_voxel.gd"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ la fumée (par défaut : 0.60)"
+  ],
+  "premier_passage": "vert (trou dans la garde, bouché : réglage absent lu par _reglage)"
+ },
+ {
+  "id": "R13",
+  "titre": "--sans-courbe ignoré",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ le sol (sans courbe : 0)",
+   "✗ les murs (sans courbe : 0)",
+   "✗ les murs éclairés (sans courbe : 0)",
+   "✗ la fumée (sans courbe : 0)"
+  ]
+ },
+ {
+  "id": "R14",
+  "titre": "la force du jeu à zéro (une courbe éteinte en silence)",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouge": true,
+  "restaure_md5": true,
+  "echecs": [
+   "✗ la force du jeu est une vraie force, dans ]0, 1] (0.00)",
+   "✗ un cœur de flaque à 100/255 monte d'au moins 20/255 (0.0) : la courbe agit sur l'octet  → une courbe posée sur la valeur décodée laisse ce gris en place",
+   "✗ le bord de la flaque (40/255) bouge moins que le cœur (0.0 contre 0.0)",
+   "✗ le cœur d'une lumière halogène pâlit (écart de teinte 0.200 → 0.200)"
+  ]
+ }
+]

@@ -1,0 +1,434 @@
+{
+ "duel": {
+  "cadre": [
+   484,
+   170,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "SANS COURBE — la brute de RR1",
+   "COURBE 0,35",
+   "COURBE 0,6 — le jeu",
+   "COURBE 1"
+  ],
+  "allumes_au_dessus_de_8": [
+   56203,
+   55935,
+   56884,
+   56186
+  ],
+  "moyenne_luma_allumee": [
+   22.5,
+   24.2,
+   25.1,
+   27.2
+  ],
+  "p99_luma_allumee": [
+   108.9,
+   123.2,
+   134.3,
+   155.6
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   4341,
+   8761,
+   12486
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   668,
+   808,
+   4998
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   400,
+   1489,
+   4981
+  ]
+ },
+ "torche": {
+  "cadre": [
+   506,
+   165,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "SANS COURBE — la brute de RR1",
+   "COURBE 0,35",
+   "COURBE 0,6 — le jeu",
+   "COURBE 1"
+  ],
+  "allumes_au_dessus_de_8": [
+   49448,
+   49449,
+   49448,
+   49448
+  ],
+  "moyenne_luma_allumee": [
+   19.7,
+   21.0,
+   22.0,
+   23.5
+  ],
+  "p99_luma_allumee": [
+   109.9,
+   125.4,
+   137.5,
+   156.0
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   3104,
+   6485,
+   7932
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   3,
+   3,
+   4
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   4,
+   3,
+   4
+  ]
+ },
+ "volume": {
+  "cadre": [
+   410,
+   137,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "SANS COURBE — la brute de RR1",
+   "COURBE 0,35",
+   "COURBE 0,6 — le jeu",
+   "COURBE 1"
+  ],
+  "allumes_au_dessus_de_8": [
+   77805,
+   77798,
+   77801,
+   77803
+  ],
+  "moyenne_luma_allumee": [
+   30.7,
+   32.8,
+   34.4,
+   36.8
+  ],
+  "p99_luma_allumee": [
+   139.1,
+   156.9,
+   170.5,
+   192.1
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   6467,
+   13533,
+   18831
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   20,
+   20,
+   13
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   13,
+   16,
+   11
+  ]
+ },
+ "retrodiffusion": {
+  "cadre": [
+   291,
+   139,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "SANS COURBE — la brute de RR1",
+   "COURBE 0,35",
+   "COURBE 0,6 — le jeu",
+   "COURBE 1"
+  ],
+  "allumes_au_dessus_de_8": [
+   115406,
+   115417,
+   115419,
+   115410
+  ],
+  "moyenne_luma_allumee": [
+   29.8,
+   31.6,
+   32.8,
+   34.8
+  ],
+  "p99_luma_allumee": [
+   118.0,
+   135.2,
+   147.9,
+   167.1
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   7290,
+   14046,
+   22181
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   19,
+   15,
+   6
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   30,
+   28,
+   10
+  ]
+ },
+ "flash-de-tir": {
+  "cadre": [
+   482,
+   161,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "SANS COURBE — la brute de RR1",
+   "COURBE 0,35",
+   "COURBE 0,6 — le jeu",
+   "COURBE 1"
+  ],
+  "allumes_au_dessus_de_8": [
+   69277,
+   72239,
+   71391,
+   69181
+  ],
+  "moyenne_luma_allumee": [
+   35.8,
+   36.8,
+   37.4,
+   38.8
+  ],
+  "p99_luma_allumee": [
+   178.0,
+   187.7,
+   194.7,
+   206.2
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   49892,
+   63775,
+   67501
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   26631,
+   29624,
+   32333
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   29593,
+   31738,
+   32237
+  ]
+ },
+ "fusee": {
+  "cadre": [
+   471,
+   200,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "SANS COURBE — la brute de RR1",
+   "COURBE 0,35",
+   "COURBE 0,6 — le jeu",
+   "COURBE 1"
+  ],
+  "allumes_au_dessus_de_8": [
+   282083,
+   282022,
+   282042,
+   282014
+  ],
+  "moyenne_luma_allumee": [
+   32.8,
+   35.7,
+   37.8,
+   40.9
+  ],
+  "p99_luma_allumee": [
+   158.5,
+   172.5,
+   183.3,
+   189.8
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   33223,
+   57694,
+   78515
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   186,
+   62,
+   145
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   125,
+   21,
+   76
+  ]
+ },
+ "sang": {
+  "cadre": [
+   461,
+   174,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "SANS COURBE — la brute de RR1",
+   "COURBE 0,35",
+   "COURBE 0,6 — le jeu",
+   "COURBE 1"
+  ],
+  "allumes_au_dessus_de_8": [
+   99471,
+   100587,
+   100269,
+   98869
+  ],
+  "moyenne_luma_allumee": [
+   22.5,
+   23.9,
+   24.5,
+   25.8
+  ],
+  "p99_luma_allumee": [
+   100.5,
+   117.3,
+   129.1,
+   144.7
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   7742,
+   12384,
+   16520
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   710,
+   1375,
+   2247
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   1826,
+   2173,
+   1645
+  ]
+ },
+ "impacts": {
+  "cadre": [
+   483,
+   288,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "SANS COURBE — la brute de RR1",
+   "COURBE 0,35",
+   "COURBE 0,6 — le jeu",
+   "COURBE 1"
+  ],
+  "allumes_au_dessus_de_8": [
+   71843,
+   72430,
+   72604,
+   70581
+  ],
+  "moyenne_luma_allumee": [
+   21.8,
+   23.2,
+   24.4,
+   25.4
+  ],
+  "p99_luma_allumee": [
+   95.6,
+   108.7,
+   119.4,
+   138.9
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   6194,
+   11297,
+   13582
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   664,
+   978,
+   2260
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   1251,
+   1739,
+   998
+  ]
+ }
+}

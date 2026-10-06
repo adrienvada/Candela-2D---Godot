@@ -84,8 +84,9 @@ const SILLAGE_OPACITE := 0.48
 const LARGEUR_SILLAGE := 1.5
 ## La traçante d'avant, dont le sillage garde la géométrie.
 const SILLAGE_MAX := 800.0
-## La planche de l'aiguille et ce que couvre sa hauteur dans le monde (`tools/fabrique_aiguille.gd`, `HAUTEUR_MONDE`).
-const AIGUILLE := preload("res://assets/decals/aiguille.png")
+## La planche de l'aiguille et ce que couvre sa hauteur dans le monde (`tools/fabrique_aiguille.gd`, `HAUTEUR_MONDE`). Son jumeau
+## FONDU (`assets/fondu/`) est celui du jeu, le masque encré celui de `--sans-fondu` : `IsoMateriaux.masque_d_effet` choisit (RR5).
+const CHEMIN_AIGUILLE := "res://assets/decals/aiguille.png"
 const HAUTEUR_AIGUILLE := 10.0
 ## À l'impact, l'aiguille s'ENFONCE dans le point touché au lieu de s'éteindre sur place : la lumière converge là où
 ## partent les étincelles et le son. Trois images à 60 Hz.
@@ -148,6 +149,8 @@ func _ready():
 	#
 	# Chantier TIR, étape A (2026-10-05) — la `Core` est le SILLAGE et l'`Aura` l'AIGUILLE : voir `PERSISTANCE`.
 	# Les deux noms sont d'avant et restent : le miroir iso (`miroirs_iso.gd`) cherche ces nœuds PAR LEUR NOM.
+	# Chantier RR, RR5 — la traçante FONDUE en jeu, encrée sous `--sans-fondu` (`IsoMateriaux.masque_d_effet`) ; l'aiguille
+	# suit la même règle (`_masque_aiguille`). La traînée ronde de RR5 (`TRAINEE`) n'a plus d'usage : l'aiguille l'a remplacée.
 	var core = Line2D.new()
 	core.name = "Core"
 	core.width = LARGEUR_SILLAGE
@@ -160,7 +163,7 @@ func _ready():
 	# été cuite retournée (`--miroir oui`) pour que le dense soit sur le
 	# projectile et l'extinction derrière : une traînée s'éteint dans son sillage,
 	# elle ne s'y allume pas.
-	var trace := LightTextures.masque("res://assets/decals/tracante.png")
+	var trace := LightTextures.masque(IsoMateriaux.masque_d_effet("res://assets/decals/tracante.png"))
 	if trace != null:
 		core.texture = trace
 		core.texture_mode = Line2D.LINE_TEXTURE_STRETCH
@@ -172,7 +175,7 @@ func _ready():
 	# planche (blanc, ambre, carmin le long du trait) : le `modulate` reste neutre.
 	var aura = Sprite2D.new()
 	aura.name = "Aura"
-	aura.texture = AIGUILLE
+	aura.texture = LightTextures.masque(IsoMateriaux.masque_d_effet(CHEMIN_AIGUILLE))
 	aura.material = mat # Additif, non éclairé — comme la traçante.
 	add_child(aura)
 

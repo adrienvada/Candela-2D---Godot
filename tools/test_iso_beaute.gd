@@ -275,7 +275,11 @@ func _la_pate_des_voxels() -> void:
 	_check("crochet : IsoMateriaux.accorder_corps dans presentation_3d.gd", pres.contains("IsoMateriaux.accorder_corps(mat)"))
 	var mat := ShaderMaterial.new()
 	IsoMateriaux.accorder_corps(mat)
-	_check("accorder_corps pose l'encre des voxels", is_equal_approx(float(mat.get_shader_parameter("encre_arete")), largeur)
+	# Chantier RR, RR3 — l'encre est l'exception (Q90 = (b), `IsoMateriaux.encre_active`, `--avec-encre`) : sans elle, une largeur
+	# nulle ; le reste est posé dans les deux cas. La suite rejoue ce test sous `--avec-encre`.
+	var attendue := largeur if IsoMateriaux.encre_active() else 0.0
+	_check("accorder_corps pose l'encre des voxels — %s (%.2f px)" % ["l'encre demandée" if IsoMateriaux.encre_active()
+		else "aucune, le jeu", attendue], is_equal_approx(float(mat.get_shader_parameter("encre_arete")), attendue)
 		and is_equal_approx(float(mat.get_shader_parameter("encre_reste")), reste))
 
 	print("— la lumière vue : la température (étape 6)")
@@ -315,8 +319,13 @@ func _la_pate_des_voxels() -> void:
 	_check("mur et sol déclarent tous les uniforms que le catalogue pose", _uniforms_declares())
 	_check("température posée sur le mur et le sol (graduée, ISO7b)", is_equal_approx(float(mur.get_shader_parameter("temperature")),
 		IsoMateriaux.TEMPERATURE_GRADUEE) and is_equal_approx(float(sol.get_shader_parameter("temperature")), IsoMateriaux.TEMPERATURE_GRADUEE))
-	_check("sol : la température s'applique après la matière", (load("res://sol_iso.gdshader") as Shader).code.contains(
-		"c = pate_facteur(c, matiere * dalle);\n\t// ISO7b"))
+	# Chantier RR, RR2 — la courbe de la lumière peinte se glisse entre les deux : la matière, la courbe, puis la température.
+	var code_sol := (load("res://sol_iso.gdshader") as Shader).code
+	var i_matiere := code_sol.find("c = pate_facteur(c, matiere * dalle);")
+	var i_courbe := code_sol.find("c = pate_courbe(c, courbe);")
+	var i_temperature := code_sol.find("c = pate_temperature(c, temperature);")
+	_check("sol : la température s'applique après la matière, et la courbe entre les deux",
+		i_matiere > 0 and i_matiere < i_courbe and i_courbe < i_temperature, "%d, %d, %d" % [i_matiere, i_courbe, i_temperature])
 	# Le facteur se VOIT tel qu'il est écrit : la raison d'être de pate_facteur (banc du 2026-09-15).
 	var gris_ecrit := Vector3(0.37, 0.37, 0.37)
 	var affiche := IsoPate.luminance(IsoPate.vers_affiche(IsoPate.facteur(gris_ecrit, 0.25))) / IsoPate.luminance(IsoPate.vers_affiche(gris_ecrit))
@@ -816,7 +825,10 @@ func _l_equite_du_shader() -> void:
 		# La température (étape 6) réécrit `c` à partir de `c` lui-même, luminance gardée : pas une source.
 		# ISO7b — la température graduée réécrit `c` à partir de `c`, luminance gardée : pas une source non plus.
 		# ISO7b — `lightmap_pateuse_lue(brute` : la pâte d'une lecture moyennée, `brute` n'étant qu'une lecture (voir plus bas).
+		# Chantier RR, RR2 — la courbe de la lumière peinte réécrit `c` à partir de `c` (0 → 0, monotone, rien sous son pied) :
+		# pas une source non plus.
 		if not (a.contains("lightmap_pateuse(") or a.contains("lightmap_pateuse_lue(brute,") or a.contains("vec3(0.0)") or a == "c = pate_temperature(c, temperature);"
+				or a == "c = pate_courbe(c, courbe);"
 				or a.begins_with("c = pate_facteur(c, ") or a.begins_with("c = pate_matiere_et_encre(c, ")
 				or a.begins_with("c = pate_temperature_graduee(c, ") or a.begins_with("c = pate_temperature_graduee_neutre(c, ")):
 			sources_propres = false

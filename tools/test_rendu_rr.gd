@@ -5,18 +5,42 @@
 ##   • **Q83 : la pâte brute par défaut**, aux TROIS endroits où le défaut est écrit — `Presentation3D.PATE_PAR_DEFAUT`,
 ##     `VoxelCorps.STYLE_PAR_DEFAUT`, `VoxelObjets.STYLE_PAR_DEFAUT` : un seul en retard, et la première image d'un corps ou
 ##     d'un objet neuf sortirait en lavis. `--pate D` remet le rendu d'avant (le nom se lit encore).
-##   • **L'essai sans encre** (`--sans-encre`, `IsoMateriaux.encre_active`) : sur des matériaux neufs accordés par les
+##   • **L'encre en jeu** (`IsoMateriaux.encre_active` ; RR1 l'essayait sous `--sans-encre`) : sur des matériaux neufs accordés par les
 ##     fonctions mêmes du jeu (`accorder_mur`, `accorder_corps`, `IsoNuageVoxel.poser_style`), l'encre NOIRE part, et elle
 ##     seule — la matière, la température, le contact, le liseré du sommet (la lumière de la face) restent. Sans le drapeau,
 ##     le jeu d'avant, réglage pour réglage. `MurEncre` ne trace plus son trait halogène : lu dans son `_draw` (le headless ne
 ##     rastérise rien, la planche de RR1 le montre).
 ##
-## Jouée deux fois par `run_suites.sh` : sans drapeau (`test_rendu_rr`) puis avec (`test_rendu_rr_sans_encre`, après `--`,
-## AVEC `--encre-essai` : l'essai sans encre doit l'emporter).
-## Lancer : godot --headless --path . --script res://tools/test_rendu_rr.gd [-- --sans-encre]
+## Étape RR2 — **la lumière peinte** (`pate_courbe`, `iso_pate.gdshaderinc` ; miroir `IsoPate.courbe`) : au-dessus de son pied
+## les mi-tons et les cœurs sont relevés, le cœur pâli vers le blanc ; sous lui, rien ne bouge. Gardé ici : les propriétés
+## (force 0 inerte, rien sous le pied, luminance jamais plus basse et croissante, rien au-delà du blanc), un effet RÉEL sur la
+## luminance de l'OCTET (posée d'abord sur la valeur décodée, la courbe ne touchait presque rien — l'algèbre seule ne l'aurait
+## pas vu, une garde nommée le voit), l'accord du shader et du miroir, et la force posée par les matériaux du jeu.
+##
+## Étape RR4 — **les lueurs** : le RAYONNEMENT des cinq sources vives (une troisième lueur, large et faible, à la place, à la taille
+## et à l'intensité de départ de leur halo doux ; `IsoVolumes._poser_rayonnement`, `--sans-rayonnement`) et la POUSSIÈRE dans le
+## faisceau (`poussiere_du_faisceau`, `volume_iso.gdshader` ; `--sans-poussiere`) — un facteur de MOYENNE 1, calculée ici sur le
+## bruit même : le rayon se grène sans s'éclaircir.
+##
+## Étape RR3 — **l'encre devient l'exception** (Q90 = (b) : sans drapeau, aucune encre ; `--avec-encre` la remet, et le trait
+## des murs avec elle ; `--sans-encre` l'emporte toujours) et **la lueur des LED au pied des murs** la remplace (`lumiere_des_led`,
+## `IsoMateriaux.lueur_led`, `Presentation3D._accorder_la_lueur_led`) : posée par le matériau du jeu, nulle sous l'encre ou
+## `--sans-lueur-led`, la même fonction dans le mur et le mur éclairé, la couleur de la bande relue à chaque image.
+##
+## Étape RR5 — **les effets en jeu, du palier au fondu** (`IsoMateriaux.effets_fondus`, `masque_d_effet` ; `--sans-fondu`) : le
+## sang au sol, les gouttes, les éclats des murs, la traçante et sa traînée chargent leurs masques d'avant l'encrage
+## (`assets/fondu/`, rendus par l'histoire), chacun avec son jumeau encré toujours en place ; le flash de mort suit son intensité
+## au lieu de ses trois paliers. Les masques de LUMIÈRE — halo, rétrodiffusion, éclat, flash de tir — ne changent pas (Q92).
+##
+## Jouée sept fois par `run_suites.sh` : sans drapeau (`test_rendu_rr`), `test_rendu_rr_avec_encre` (`--avec-encre`),
+## `test_rendu_rr_sans_encre` (`--sans-encre --encre-essai` : le retrait doit l'emporter), `test_rendu_rr_sans_courbe`
+## (`--sans-courbe`), `test_rendu_rr_sans_lueur` (`--sans-lueur-led`), `test_rendu_rr_sans_lueurs` (`--sans-rayonnement
+## --sans-poussiere`), `test_rendu_rr_sans_fondu` (`--sans-fondu`).
+## Lancer : godot --headless --path . --script res://tools/test_rendu_rr.gd [-- --avec-encre | --sans-encre | --sans-courbe | --sans-lueur-led | --sans-fondu]
 extends SceneTree
 
 const IsoPate := preload("res://iso_pate.gd")
+const Charte := preload("res://charte.gd")
 
 var _failures := 0
 var _verifications := 0
@@ -36,21 +60,63 @@ func _init() -> void:
 
 
 func _run() -> void:
-	print("=== RR1 — LE RENDU EN JEU SANS LA PÂTE ROMAN GRAPHIQUE ===")
+	print("=== RR — LE RENDU EN JEU : LA BRUTE (RR1), LA LUMIÈRE PEINTE (RR2), L'ENCRE EN EXCEPTION ET LA LUEUR DES LED (RR3) ===")
 	await process_frame
-	var sans_encre := DrapeauxDeLancement.present(IsoMateriaux.DRAPEAU_SANS_ENCRE)
-	print("  (essai sans encre : %s)" % ("OUI, " + IsoMateriaux.DRAPEAU_SANS_ENCRE if sans_encre else "non — le jeu par défaut"))
+	var sans_encre := not IsoMateriaux.encre_active()
+	print("  (encre : %s)" % ("aucune — le jeu" if sans_encre else "OUI, demandée (" + " ".join(
+		DrapeauxDeLancement.arguments()) + ")"))
+	var sans_courbe := DrapeauxDeLancement.present(IsoMateriaux.DRAPEAU_SANS_COURBE)
+	print("  (sans la courbe : %s)" % ("OUI, " + IsoMateriaux.DRAPEAU_SANS_COURBE if sans_courbe else "non — le jeu par défaut"))
+	_l_encre_par_defaut()
 	_la_pate_par_defaut()
 	_l_encre_des_murs(sans_encre)
 	_l_encre_des_corps(sans_encre)
 	_l_encre_de_la_fumee(sans_encre)
 	_le_trait_des_murs(sans_encre)
+	_la_courbe_au_miroir()
+	_la_courbe_dans_les_shaders()
+	_la_courbe_des_materiaux(sans_courbe)
+	_la_lueur_des_led_dans_les_shaders()
+	_la_lueur_des_led_posee()
+	_le_rayonnement()
+	_la_poussiere()
+	_les_effets_fondus()
 	print("%d vérifications, %d échec(s)" % [_verifications, _failures])
 	quit(1 if _failures > 0 else 0)
 
 
 func _constante(chemin: String, nom: String) -> Variant:
 	return (load(chemin) as GDScript).get_script_constant_map().get(nom)
+
+
+## Un réglage lu sur un matériau : -1 s'il n'a jamais été posé. `float(null)` est une ERREUR DE SCRIPT, qui arrête la fonction
+## sans faire échouer aucune vérification (le test sortait en 0) — vu par le sabotage « accorder_mur oublie la courbe ».
+func _reglage(mat: ShaderMaterial, nom: String) -> float:
+	var v: Variant = mat.get_shader_parameter(nom)
+	return float(v) if v != null else -1.0
+
+
+# ---------------------------------------------------------------------------
+# RR3 (Q90 = b) — L'ENCRE EST L'EXCEPTION
+# ---------------------------------------------------------------------------
+
+func _l_encre_par_defaut() -> void:
+	print("— RR3 : l'encre est l'exception (Q90 = (b))")
+	var avec := DrapeauxDeLancement.present(IsoMateriaux.DRAPEAU_AVEC_ENCRE)
+	var essai := DrapeauxDeLancement.present(IsoMateriaux.DRAPEAU_ENCRE_ESSAI)
+	var sans := DrapeauxDeLancement.present(IsoMateriaux.DRAPEAU_SANS_ENCRE)
+	if not avec and not essai and not sans:
+		_check("sans drapeau d'encre, le jeu n'en pose aucune", not IsoMateriaux.encre_active())
+	if avec and not sans:
+		_check("--avec-encre la remet", IsoMateriaux.encre_active())
+	if sans:
+		_check("--sans-encre l'emporte sur tout autre drapeau", not IsoMateriaux.encre_active())
+	# La règle, lue dans son code (les drapeaux d'une exécution n'en jouent qu'un cas) : le retrait d'abord, puis l'un des deux.
+	var corps := _fonction(FileAccess.get_file_as_string("res://iso_materiaux.gd"), "static func encre_active() -> bool:")
+	_check("la règle : --sans-encre d'abord, puis --avec-encre ou --encre-essai, sinon aucune encre",
+		corps.contains("if DrapeauxDeLancement.present(DRAPEAU_SANS_ENCRE):\n\t\treturn false")
+		and corps.contains("return DrapeauxDeLancement.present(DRAPEAU_AVEC_ENCRE) or DrapeauxDeLancement.present(DRAPEAU_ENCRE_ESSAI)"),
+		corps)
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +160,7 @@ func _l_encre_des_murs(sans_encre: bool) -> void:
 		_check("sans encre : l'arête d'un mur ne s'assombrit plus (reste %.2f, largeur %.1f px)" % [reste, px],
 			is_equal_approx(reste, 1.0) and px == 0.0)
 	else:
-		_check("par défaut : l'encre des arêtes, comme avant (%.1f px, reste %.2f)" % [px, reste],
+		_check("avec encre : les arêtes, comme avant RR3 (%.1f px, reste %.2f)" % [px, reste],
 			is_equal_approx(px, IsoMateriaux.ENCRE_ARETE_PX) and is_equal_approx(reste, IsoMateriaux.ENCRE_ARETE_RESTE))
 	# Ce qui n'est pas de l'encre ne bouge pas, avec ou sans le drapeau.
 	_check("la matière des faces reste", is_equal_approx(float(mur.get_shader_parameter("force_matiere")),
@@ -116,15 +182,13 @@ func _l_encre_des_corps(sans_encre: bool) -> void:
 	if sans_encre:
 		_check("sans encre : les arêtes des voxels ne sont plus tracées (%.2f px)" % largeur, largeur == 0.0)
 	else:
-		_check("par défaut : l'encre des voxels, comme avant (%.2f px)" % largeur,
+		_check("avec encre : les arêtes des voxels, comme avant RR3 (%.2f px)" % largeur,
 			is_equal_approx(largeur, IsoMateriaux.ENCRE_VOXEL_PX))
 	_check("le modelé des corps reste", is_equal_approx(float(corps.get_shader_parameter("modele")), 1.0))
-	# `run_suites.sh` joue la variante sans encre AVEC `--encre-essai` : la préséance se joue pour de vrai.
-	if sans_encre and DrapeauxDeLancement.present(IsoMateriaux.DRAPEAU_ENCRE_ESSAI):
-		_check("l'encre renforcée, demandée aussi (--encre-essai), cède à l'essai sans encre",
-			not IsoMateriaux.encre_essai_active())
-	elif sans_encre:
-		print("  (préséance sur --encre-essai non jouée : le drapeau n'est pas passé)")
+	# `run_suites.sh` joue `--sans-encre` AVEC `--encre-essai` : la préséance se joue pour de vrai.
+	if DrapeauxDeLancement.present(IsoMateriaux.DRAPEAU_SANS_ENCRE) and DrapeauxDeLancement.present(IsoMateriaux.DRAPEAU_ENCRE_ESSAI):
+		_check("l'encre renforcée, demandée aussi (--encre-essai), cède à --sans-encre",
+			not IsoMateriaux.encre_essai_active() and not IsoMateriaux.encre_active())
 
 
 func _l_encre_de_la_fumee(sans_encre: bool) -> void:
@@ -135,7 +199,7 @@ func _l_encre_de_la_fumee(sans_encre: bool) -> void:
 	var style := int(nuage.get_shader_parameter("encre_style"))
 	var aucune := int(IsoNuageVoxel.ENCRES["aucune"])
 	var attendu := aucune if sans_encre else int(IsoNuageVoxel.ENCRES[IsoNuageVoxel.ENCRE_PAR_DEFAUT])
-	_check("%s : l'encre de la fumée est « %s » (%d)" % ["sans encre" if sans_encre else "par défaut",
+	_check("%s : l'encre de la fumée est « %s » (%d)" % ["sans encre" if sans_encre else "avec encre",
 		"aucune" if sans_encre else IsoNuageVoxel.ENCRE_PAR_DEFAUT, style], style == attendu)
 	# Même une encre demandée nommément cède à l'essai (`--fumee-encre=hachures --sans-encre` : aucune).
 	IsoNuageVoxel.poser_style(nuage, "hachures", IsoNuageVoxel.RELIEF_PAR_DEFAUT)
@@ -159,5 +223,491 @@ func _le_trait_des_murs(sans_encre: bool) -> void:
 		"garde %d, lavis %d, trait %d" % [garde, lavis, pos_trait])
 	_check("la garde rend la main (aucun trait sous elle)",
 		corps_draw.substr(garde, corps_draw.find("\n", corps_draw.find("\n", garde) + 1) - garde).contains("return"))
-	_check("%s : le trait %s" % ["sans encre" if sans_encre else "par défaut", "part" if sans_encre else "se trace"],
+	_check("%s : le trait %s" % ["sans encre" if sans_encre else "avec encre", "part" if sans_encre else "se trace"],
 		IsoMateriaux.encre_active() == not sans_encre)
+
+
+# ---------------------------------------------------------------------------
+# RR2 — LA LUMIÈRE PEINTE
+# ---------------------------------------------------------------------------
+
+## Un nuancier : des gris, l'ambre des torches, la braise, le rouge de la fusée, le carmin, un bleu — chacun à toutes les
+## intensités, jusqu'au-delà du blanc (une lightmap additive peut le dépasser).
+func _nuancier() -> Array[Vector3]:
+	var teintes: Array[Vector3] = [Vector3(1.0, 1.0, 1.0), Vector3(1.0, 0.78, 0.45), Vector3(1.0, 0.6, 0.2),
+		Vector3(1.0, 0.12, 0.12), Vector3(0.7, 0.05, 0.2), Vector3(0.3, 0.5, 1.0)]
+	var couleurs: Array[Vector3] = []
+	for teinte: Vector3 in teintes:
+		for i in 61:
+			couleurs.append(teinte * (float(i) / 40.0))
+	return couleurs
+
+
+func _la_courbe_au_miroir() -> void:
+	print("— RR2 : la lumière peinte, au miroir (`IsoPate.courbe`)")
+	var force := IsoMateriaux.COURBE_LUMIERE
+	_check("la force du jeu est une vraie force, dans ]0, 1] (%.2f)" % force, force > 0.0 and force <= 1.0)
+	var noir := 8.0 / 255.0
+	_check("le pied (%.3f, %.1f/255 écrit) est au-dessus du point noir écrit (8/255), avec marge" % [IsoPate.COURBE_PIED,
+		IsoPate.COURBE_PIED * 255.0], IsoPate.COURBE_PIED >= 1.5 * noir,
+		"un pied au niveau du noir laisserait la courbe faire entrer ou sortir un pixel du noir")
+	_check("pied < genou < 1 et blanc < 1 : la courbe a une forme", IsoPate.COURBE_PIED < IsoPate.COURBE_GENOU
+		and IsoPate.COURBE_GENOU < 1.0 and IsoPate.COURBE_BLANC < 1.0)
+	var inerte := true
+	var sous_le_pied := true
+	var jamais_plus_bas := true
+	var sous_le_blanc := true
+	var zero := true
+	var pire := ""
+	for f: float in [0.35, force, 1.0]:
+		for c: Vector3 in _nuancier():
+			var r := IsoPate.courbe(c, f)
+			inerte = inerte and IsoPate.courbe(c, 0.0) == c
+			var l := IsoPate.luminance(c)
+			if l <= IsoPate.COURBE_PIED:
+				sous_le_pied = sous_le_pied and r == c
+			if IsoPate.luminance(r) < l - 0.000001:
+				jamais_plus_bas = false
+				pire = "%s → %s" % [str(c), str(r)]
+			# Une couleur affichable le reste : le relèvement ne fabrique pas de surexposition.
+			if c[0] <= 1.0 and c[1] <= 1.0 and c[2] <= 1.0:
+				for i in 3:
+					sous_le_blanc = sous_le_blanc and r[i] <= 1.000001
+		zero = zero and IsoPate.courbe(Vector3.ZERO, f) == Vector3.ZERO
+	_check("force 0 : la lumière telle quelle, à toute couleur et toute intensité", inerte)
+	_check("sous le pied, la lumière telle quelle : la lueur faible (l'information) et le noir ne bougent pas", sous_le_pied)
+	_check("0 → 0 : le noir absolu reste noir", zero)
+	_check("au-dessus du pied, la luminance ne descend jamais (aucun pixel n'entre dans le noir)", jamais_plus_bas, pire)
+	_check("une couleur affichable le reste : aucune composante poussée au-delà du blanc", sous_le_blanc)
+	# Croissante : une lumière plus forte reste plus claire, à toute teinte — l'ordre des lumières, c'est l'information.
+	var croissante := true
+	for teinte: Vector3 in [Vector3(1.0, 1.0, 1.0), Vector3(1.0, 0.6, 0.2), Vector3(1.0, 0.12, 0.12)]:
+		var avant := -1.0
+		for i in 401:
+			var l := IsoPate.luminance(IsoPate.courbe(teinte * (float(i) / 400.0), force))
+			croissante = croissante and l >= avant - 0.000001
+			avant = l
+	_check("croissante : une lumière plus forte reste plus claire, gris, ambre et rouge (pas de 1/400)", croissante)
+	# L'effet existe, et il est sur l'OCTET : un gris de 100/255 (le cœur d'une flaque de plafonnier au banc) monte d'au moins
+	# 20/255. Posée sur la valeur décodée (le premier câblage), la courbe le laissait à 100 : décodé, il ne valait que 0,13.
+	var cœur := Vector3.ONE * (100.0 / 255.0)
+	var monte := (IsoPate.luminance(IsoPate.courbe(cœur, force)) - IsoPate.luminance(cœur)) * 255.0
+	_check("un cœur de flaque à 100/255 monte d'au moins 20/255 (%.1f) : la courbe agit sur l'octet" % monte, monte >= 20.0,
+		"une courbe posée sur la valeur décodée laisse ce gris en place")
+	# Et une flaque à 40/255 (son bord) bouge peu : le dégradé se creuse, c'est le cœur qui monte.
+	var bord := Vector3.ONE * (40.0 / 255.0)
+	var bouge := (IsoPate.luminance(IsoPate.courbe(bord, force)) - IsoPate.luminance(bord)) * 255.0
+	_check("le bord de la flaque (40/255) bouge moins que le cœur (%.1f contre %.1f)" % [bouge, monte],
+		bouge < monte * 0.5)
+	# Le cœur pâlit vers le blanc, mais seulement d'une lumière neutre : la fusée rouge garde son rouge, l'ambre des LED le sien.
+	var halogene := Vector3(1.0, 0.92, 0.8) * 0.9
+	var rouge := Vector3(1.0, 0.12, 0.12) * 0.95
+	var h := IsoPate.courbe(halogene, force)
+	var r := IsoPate.courbe(rouge, force)
+	var ecart_h := (h.x - h.z) / h.x
+	var ecart_r := (r.x - r.y) / r.x
+	_check("le cœur d'une lumière halogène pâlit (écart de teinte %.3f → %.3f)" % [(halogene.x - halogene.z) / halogene.x,
+		ecart_h], ecart_h < (halogene.x - halogene.z) / halogene.x - 0.02)
+	_check("la fusée rouge garde son rouge (écart de teinte %.3f → %.3f)" % [(rouge.x - rouge.y) / rouge.x, ecart_r],
+		is_equal_approx(ecart_r, (rouge.x - rouge.y) / rouge.x))
+	# Le rouge de la fusée (luminance 0,29) n'atteint jamais le seuil du blanchiment : seul l'ambre des LED, vif (0,72), dit si
+	# le poids de neutralité tient — vu par le sabotage qui le retire, que la fusée laissait passer.
+	var ambre := Vector3(Charte.AMBRE.r, Charte.AMBRE.g, Charte.AMBRE.b)
+	var a := IsoPate.courbe(ambre, force)
+	_check("l'ambre des LED, vif (luminance %.2f), garde sa teinte (%.3f → %.3f)" % [IsoPate.luminance(ambre),
+		(ambre.x - ambre.z) / ambre.x, (a.x - a.z) / a.x], IsoPate.luminance(ambre) > IsoPate.COURBE_BLANC
+		and is_equal_approx((a.x - a.z) / a.x, (ambre.x - ambre.z) / ambre.x))
+
+
+func _la_courbe_dans_les_shaders() -> void:
+	print("— RR2 : la courbe dans les shaders")
+	var inc := FileAccess.get_file_as_string("res://iso_pate.gdshaderinc")
+	# Les constantes du shader sont celles du miroir.
+	for paire: Array in [["PATE_COURBE_PIED", IsoPate.COURBE_PIED], ["PATE_COURBE_GENOU", IsoPate.COURBE_GENOU],
+			["PATE_COURBE_BLANC", IsoPate.COURBE_BLANC]]:
+		var cle := "const float %s = " % paire[0]
+		var i := inc.find(cle)
+		var valeur := inc.substr(i + cle.length(), inc.find(";", i) - i - cle.length()) if i >= 0 else ""
+		_check("%s du shader = celui du miroir (%s)" % [paire[0], valeur],
+			valeur.is_valid_float() and is_equal_approx(valeur.to_float(), float(paire[1])))
+	var debut := inc.find("vec3 pate_courbe(vec3 c, float force) {")
+	var fin := inc.find("\n}\n", debut)
+	var corps := inc.substr(debut, fin - debut) if debut >= 0 else ""
+	_check("`pate_courbe` existe dans l'include partagé", debut >= 0)
+	_check("`pate_courbe` lit la luminance de l'octet, jamais la valeur décodée (`pate_vers_affiche`)",
+		corps.contains("float s = pate_luminance(c);") and not corps.contains("pate_vers_affiche")
+		and not corps.contains("pate_depuis_affiche"))
+	# Les cinq matériaux qui la portent : déclarée, appelée une fois, AVANT la température.
+	for paire: Array in [["res://sol_iso.gdshader", "c = pate_courbe(c, courbe);"],
+			["res://mur_iso.gdshader", "c = pate_courbe(c, courbe);"],
+			["res://sol_iso_eclaire.gdshader", "c2d = pate_courbe(c2d, courbe);"],
+			["res://mur_iso_eclaire.gdshader", "c = pate_courbe(c, courbe);"],
+			["res://nuage_voxel_iso.gdshader", "col = pate_courbe(col, courbe);"]]:
+		var code := FileAccess.get_file_as_string(paire[0])
+		var appel: String = paire[1]
+		var i_appel := code.find(appel)
+		var i_temperature := code.find("pate_temperature", maxi(i_appel, 0))
+		_check("%s : `courbe` déclarée, appelée une fois, avant la température" % paire[0].get_file(),
+			code.contains("uniform float courbe") and i_appel > 0 and code.count(appel) == 1
+			and i_temperature > i_appel and code.count("pate_courbe(") == 1,
+			"appel %d, température %d" % [i_appel, i_temperature])
+
+
+func _la_courbe_des_materiaux(sans_courbe: bool) -> void:
+	print("— RR2 : la force posée par les matériaux du jeu")
+	var attendu := 0.0 if sans_courbe else IsoMateriaux.COURBE_LUMIERE
+	var quoi := "sans courbe : 0" if sans_courbe else "par défaut : %.2f" % attendu
+	var sol := ShaderMaterial.new()
+	sol.shader = load("res://sol_iso.gdshader")
+	IsoMateriaux.accorder_sol(sol)
+	_check("le sol (%s)" % quoi, is_equal_approx(_reglage(sol, "courbe"), attendu))
+	var mur := ShaderMaterial.new()
+	mur.shader = load("res://mur_iso.gdshader")
+	IsoMateriaux.accorder_mur(mur)
+	_check("les murs (%s)" % quoi, is_equal_approx(_reglage(mur, "courbe"), attendu))
+	# La variante éclairée (`lumiere_3d`) reprend le matériau du mur : le réglage tient au changement de shader.
+	mur.shader = load("res://mur_iso_eclaire.gdshader")
+	IsoMateriaux.accorder_mur(mur)
+	_check("les murs éclairés (%s)" % quoi, is_equal_approx(_reglage(mur, "courbe"), attendu))
+	var nuage := IsoNuageVoxel.materiau("cartouche_suie", 0, 4.0, 20.0, 0)
+	_check("la fumée (%s)" % quoi, is_equal_approx(_reglage(nuage, "courbe"), attendu))
+	# Sans beauté, la courbe s'éteint comme la température (lu dans le code : la suite ne rejoue pas `--sans-beaute` ici).
+	var source := FileAccess.get_file_as_string("res://iso_materiaux.gd")
+	var i := source.find("static func courbe_lumiere() -> float:")
+	_check("sans beauté, aucune courbe (`courbe_lumiere` rend 0 hors beauté)",
+		i >= 0 and source.substr(i, 200).contains("if not beaute_active() or"))
+
+
+# ---------------------------------------------------------------------------
+# RR3 (Q90 = b) — LA LUEUR DES LED AU PIED DES MURS
+# ---------------------------------------------------------------------------
+
+const LIGNE_PART := "float part_led = clamp(pate_luminance(lumiere_des_led(monde.xz + n * pied, peinture_ref)) / max(pate_luminance(brute), 0.0001), 0.0, 1.0);"
+const LIGNE_LUEUR := "c = pate_facteur(c, 1.0 + led_lueur * exp(-hauteur_face / led_lueur_px) * part_led);"
+
+
+func _la_lueur_des_led_dans_les_shaders() -> void:
+	print("— RR3 : la lueur des LED dans les shaders des murs")
+	var mur := FileAccess.get_file_as_string("res://mur_iso.gdshader")
+	var eclaire := FileAccess.get_file_as_string("res://mur_iso_eclaire.gdshader")
+	var tous := true
+	for u in ["uniform sampler2D led_texture", "uniform bool led_active", "uniform vec2 led_origine_px", "uniform vec2 led_taille_px",
+			"uniform vec3 led_couleur", "uniform float led_lueur", "uniform float led_lueur_px"]:
+		tous = tous and mur.contains(u) and eclaire.contains(u)
+	_check("le mur du jeu et le mur éclairé déclarent la bande et la lueur", tous)
+	var f_mur := _fonction(mur, "vec3 lumiere_des_led(vec2 px, vec3 ref) {")
+	var f_eclaire := _fonction(eclaire, "vec3 lumiere_des_led(vec2 px, vec3 ref) {")
+	_check("`lumiere_des_led` : la même dans les deux murs", f_mur != "" and f_mur == f_eclaire)
+	# Le noir absolu : rien sans bande allumée, rien sans lueur — la sortie EN TÊTE, avant toute lecture.
+	_check("`lumiere_des_led` rend 0 sans bande ou sans lueur, avant toute lecture, et 0 hors du rectangle de la bande",
+		f_mur.find("if (!led_active || led_lueur <= 0.0) {\n\t\treturn vec3(0.0);\n\t}") > 0
+		and f_mur.find("if (!led_active || led_lueur <= 0.0)") < f_mur.find("textureLod(")
+		and f_mur.contains("if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {\n\t\treturn vec3(0.0);")
+		and f_mur.contains("return textureLod(led_texture, uv, 0.0).a * led_couleur * ref;"))
+	# La ligne : sur la face verticale, après la matière, l'encre et le contact, avant la courbe et la température.
+	var i_ligne := mur.find(LIGNE_LUEUR)
+	var i_matiere := mur.find("c = pate_matiere_et_encre(c, matiere * lambert * contact, encre_arete_reste")
+	var i_courbe := mur.find("c = pate_courbe(c, courbe);")
+	_check("mur du jeu : la lueur se pose sur la face, après la matière et le contact, avant la courbe — une fois",
+		i_ligne > 0 and mur.count(LIGNE_LUEUR) == 1 and i_matiere > 0 and i_matiere < i_ligne and i_ligne < i_courbe,
+		"matière %d, lueur %d, courbe %d" % [i_matiere, i_ligne, i_courbe])
+	# Un FACTEUR sur la lumière lue, pondéré par la part de la bande dans cette lumière : jamais un terme (`c +=`), qui
+	# éclairerait une face que la lightmap laisse noire — la règle d'ISO7, gardée aussi par `test_iso_beaute`.
+	var i_part := mur.find(LIGNE_PART)
+	_check("mur du jeu : la lueur relève la PART de la bande dans la lumière reçue (lue juste avant), sans terme ajouté",
+		i_part > i_matiere and i_part < i_ligne and mur.count(LIGNE_PART) == 1 and not mur.contains("c += ")
+		and eclaire.count(LIGNE_PART) == 1)
+	var i_identite := eclaire.find("if (identite_2d) {\n\t\t\t// Chantier RR, RR3")
+	_check("mur éclairé : la même ligne, au chemin 2D seulement (l'ancien chemin a sa LED en émission)",
+		eclaire.count(LIGNE_LUEUR) == 1 and i_identite > 0 and eclaire.find(LIGNE_LUEUR) > i_identite)
+
+
+func _la_lueur_des_led_posee() -> void:
+	print("— RR3 : la lueur des LED, posée par le jeu")
+	var encre := IsoMateriaux.encre_active()
+	var sans := DrapeauxDeLancement.present(IsoMateriaux.DRAPEAU_SANS_LUEUR_LED)
+	var attendu := 0.0 if encre or sans else IsoMateriaux.LUEUR_LED
+	var pourquoi := "l'encre est là, et son trait" if encre else ("--sans-lueur-led" if sans else "le jeu")
+	_check("la lueur du jeu est une vraie lueur (facteur %.1f au ras du sol sur la part de la bande, retombé à 1/e à %.0f px)" % [
+		IsoMateriaux.LUEUR_LED, IsoMateriaux.LUEUR_LED_PX], IsoMateriaux.LUEUR_LED > 1.0 and IsoMateriaux.LUEUR_LED_PX > 0.0)
+	for chemin in ["res://mur_iso.gdshader", "res://mur_iso_eclaire.gdshader"]:
+		var mur := ShaderMaterial.new()
+		mur.shader = load(chemin)
+		IsoMateriaux.accorder_mur(mur)
+		_check("%s : lueur %.1f (%s)" % [chemin.get_file(), attendu, pourquoi],
+			is_equal_approx(_reglage(mur, "led_lueur"), attendu)
+			and is_equal_approx(_reglage(mur, "led_lueur_px"), IsoMateriaux.LUEUR_LED_PX))
+	var regle := _fonction(FileAccess.get_file_as_string("res://iso_materiaux.gd"), "static func lueur_led() -> float:")
+	_check("sans beauté, et sous l'encre (le trait reprend sa place), aucune lueur",
+		regle.contains("if not beaute_active() or encre_active() or DrapeauxDeLancement.present(DRAPEAU_SANS_LUEUR_LED):\n\t\treturn 0.0"))
+	# La présentation : la bande de CETTE image, relue sur la lumière, à chaque image, lumière 3D allumée ou non.
+	var pres := FileAccess.get_file_as_string("res://presentation_3d.gd")
+	var i_suivre := pres.find("func _suivre() -> void:")
+	var i_appel := pres.find("_accorder_la_lueur_led()", i_suivre)
+	var i_lumieres := pres.find("if _lumieres != null:", i_suivre)
+	_check("la présentation repose la bande à chaque image (`_suivre`), hors de la branche de la lumière 3D",
+		i_suivre > 0 and i_appel > i_suivre and i_appel < i_lumieres and pres.find("\nfunc ", i_suivre + 1) > i_lumieres)
+	var accorder := _fonction(pres, "func _accorder_la_lueur_led() -> void:")
+	_check("…relue sur la lumière : sa couleur × son énergie, NOIRE éteinte ou cachée",
+		accorder.contains("if led.enabled and led.is_visible_in_tree():")
+		and accorder.contains("couleur = Vector3(led.color.r, led.color.g, led.color.b) * led.energy")
+		and accorder.contains("var couleur := Vector3.ZERO")
+		and accorder.contains("_mat_mur.set_shader_parameter(\"led_couleur\", couleur)"))
+
+
+## Le texte d'une fonction (shader ou script) : de sa signature à la première ligne vide qui la suit.
+func _fonction(texte: String, signature: String) -> String:
+	var i := texte.find(signature)
+	if i < 0:
+		return ""
+	var fin := texte.find("\n\n", i)
+	return texte.substr(i, (fin if fin >= 0 else texte.length()) - i)
+
+
+# ---------------------------------------------------------------------------
+# RR4 — LES LUEURS : LE RAYONNEMENT DES SOURCES VIVES, LA POUSSIÈRE DANS LE FAISCEAU
+# ---------------------------------------------------------------------------
+
+const SOURCES_QUI_RAYONNENT := ["_suivre_comete", "_suivre_eclair", "_suivre_plafonniers", "_suivre_eclats",
+	"_suivre_lentilles_des_joueurs"]
+
+
+## Le texte d'une fonction GDScript : de `func <nom>(` à la fonction suivante (une ligne vide n'y met pas fin).
+func _fonction_gd(texte: String, nom: String) -> String:
+	var i := texte.find("func %s(" % nom)
+	if i < 0:
+		return ""
+	var fin := texte.find("\nfunc ", i + 1)
+	return texte.substr(i, (fin if fin >= 0 else texte.length()) - i)
+
+
+func _le_rayonnement() -> void:
+	print("— RR4 : le rayonnement des sources vives")
+	var sans := DrapeauxDeLancement.present(IsoVolumes.DRAPEAU_SANS_RAYONNEMENT)
+	_check("un rayonnement est plus large que son halo et plus faible que lui (%.1f fois le diamètre, %.2f fois l'intensité)" % [
+		IsoVolumes.RAYONNEMENT_TAILLE, IsoVolumes.RAYONNEMENT_INTENSITE], IsoVolumes.RAYONNEMENT_TAILLE > 1.0
+		and IsoVolumes.RAYONNEMENT_INTENSITE > 0.0 and IsoVolumes.RAYONNEMENT_INTENSITE < 1.0)
+	_check("%s : le rayonnement %s" % ["--sans-rayonnement" if sans else "le jeu", "éteint" if sans else "allumé"],
+		IsoVolumes.rayonnement_actif() == (not sans and IsoMateriaux.beaute_active()))
+	# Chaque source vive : trois lueurs, et le rayonnement part EXACTEMENT de son halo doux — même lieu, même taille et même
+	# intensité de départ —, donc de sa source : source éteinte, rayonnement éteint (le noir absolu).
+	var source := FileAccess.get_file_as_string("res://iso_volumes.gd")
+	for nom: String in SOURCES_QUI_RAYONNENT:
+		var f := _fonction_gd(source, nom)
+		var i := f.find("_poser_rayonnement(e, 2, ")
+		var args := f.substr(i + "_poser_rayonnement(e, 2, ".length(), f.find(")\n", i) - i - "_poser_rayonnement(e, 2, ".length()) \
+			if i >= 0 else "?"
+		_check("%s : trois lueurs, le rayonnement sur le halo doux (%s)" % [nom, args],
+			f.contains("_halos(e, 3)") and f.count("_poser_rayonnement(") == 1
+			and (f.contains("_poser_halo(e, 0, %s, 0)" % args) or f.contains("_poser_halo(e, 1, %s, 0)" % args)))
+	# Pour de vrai, sur un `IsoVolumes` : la troisième lueur, sa taille, son intensité, sa forme douce — éteinte sans rayonnement.
+	var v := IsoVolumes.new()
+	var e := {"noeuds": [], "mats": []}
+	v.call("_halos", e, 3)
+	v.call("_poser_rayonnement", e, 2, Vector3(1.0, 2.0, 3.0), 30.0, Color(1.0, 0.8, 0.5), 0.8)
+	var mi: MeshInstance3D = e["noeuds"][2]
+	var mat: ShaderMaterial = e["mats"][2]
+	var actif := IsoVolumes.rayonnement_actif()
+	var attendue := 0.8 * IsoVolumes.RAYONNEMENT_INTENSITE if actif else 0.0
+	_check("posé pour de vrai : %.0f px, intensité %.2f, forme douce, %s" % [30.0 * IsoVolumes.RAYONNEMENT_TAILLE, attendue,
+		"visible" if actif else "caché"], is_equal_approx(mi.scale.x, 30.0 * IsoVolumes.RAYONNEMENT_TAILLE)
+		and is_equal_approx(_reglage(mat, "intensite"), attendue) and int(mat.get_shader_parameter("forme")) == 0
+		and mi.visible == actif and mi.position.is_equal_approx(Vector3(1.0, 2.0, 3.0)))
+	v.free()
+
+
+func _la_poussiere() -> void:
+	print("— RR4 : la poussière dans le faisceau")
+	var sans := DrapeauxDeLancement.present(IsoVolumes.DRAPEAU_SANS_POUSSIERE)
+	_check("la force du jeu est une vraie force, dans ]0, 1] (%.2f)" % IsoVolumes.POUSSIERE,
+		IsoVolumes.POUSSIERE > 0.0 and IsoVolumes.POUSSIERE <= 1.0)
+	_check("%s : la poussière %s" % ["--sans-poussiere" if sans else "le jeu", "éteinte" if sans else "posée"],
+		is_equal_approx(IsoVolumes.poussiere_du_faisceau(), 0.0 if sans or not IsoMateriaux.beaute_active() else IsoVolumes.POUSSIERE))
+	_check("chaque couche du rayon reçoit la force (`_poser_longueur`)",
+		_fonction_gd(FileAccess.get_file_as_string("res://iso_volumes.gd"), "_poser_longueur").contains(
+			"mat.set_shader_parameter(\"poussiere_faisceau\", poussiere_du_faisceau())"))
+	var sh := FileAccess.get_file_as_string("res://volume_iso.gdshader")
+	var i_def := sh.find("#ifdef FAISCEAU_LUMINEUX\n// Chantier RR, RR4 — le facteur de la poussière")
+	var i_appel := sh.find("a *= poussiere_du_faisceau(px, px_ecran);")
+	var i_coupe := sh.find("a *= 1.0 - smoothstep(longueur_air * (1.0 - fondu_air), longueur_air, length(px - nuage_centre));")
+	_check("le shader : la poussière au rayon seulement (`FAISCEAU_LUMINEUX`), après sa longueur, une fois",
+		sh.contains("uniform float poussiere_faisceau") and i_def > 0 and i_coupe > 0 and i_appel > i_coupe
+		and sh.count("a *= poussiere_du_faisceau(") == 1 and sh.rfind("#ifdef FAISCEAU_LUMINEUX", i_appel) > i_def
+		and sh.find("#endif", i_appel) < sh.find("a = clamp(a, 0.0, 1.0);", i_appel))
+	var f := _fonction(sh, "float poussiere_du_faisceau(vec2 px, float px_ecran) {")
+	_check("sans force, le facteur vaut 1 avant toute lecture (le rayon de Q41, lisse)",
+		f.find("if (poussiere_faisceau <= 0.0) {\n\t\treturn 1.0;\n\t}") > 0 and f.find("return 1.0;") < f.find("pate_bruit("))
+	# LA MOYENNE : le facteur, sur le bruit même (`IsoPate._bruit`, le miroir de `pate_bruit`), à la force 1 — le faisceau se grène,
+	# il ne s'éclaircit pas. Les constantes sont lues dans le shader : un réglage qui y changerait se mesure ici.
+	var seuils := _vec2_du_shader(sh, "POUSSIERE_SEUILS")
+	var creux := _flottant_du_shader(sh, "POUSSIERE_CREUX")
+	var gain := _flottant_du_shader(sh, "POUSSIERE_GAIN")
+	var somme := 0.0
+	var mini := 1e9
+	var maxi := -1e9
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20261006
+	var n := 20000
+	for k in n:
+		var g := IsoPate._bruit(Vector2(rng.randf_range(0.0, 400.0), rng.randf_range(0.0, 400.0)))
+		var fac := 1.0 - creux + smoothstep(seuils.x, seuils.y, g) * gain
+		somme += fac
+		mini = minf(mini, fac)
+		maxi = maxf(maxi, fac)
+	var moyenne := somme / float(n)
+	_check("en moyenne, le faisceau ne s'éclaircit pas : facteur moyen %.3f à pleine force (1 ± 0,03)" % moyenne,
+		absf(moyenne - 1.0) <= 0.03)
+	_check("il ne s'éteint nulle part (au plus creux %.2f) et ses grains se voient sans éblouir (au plus %.2f)" % [mini, maxi],
+		mini >= 0.8 and maxi <= 6.0 and maxi > 2.0)
+
+
+func _flottant_du_shader(sh: String, nom: String) -> float:
+	var cle := "const float %s = " % nom
+	var i := sh.find(cle)
+	return sh.substr(i + cle.length(), sh.find(";", i) - i - cle.length()).to_float() if i >= 0 else NAN
+
+
+func _vec2_du_shader(sh: String, nom: String) -> Vector2:
+	var cle := "const vec2 %s = vec2(" % nom
+	var i := sh.find(cle)
+	if i < 0:
+		return Vector2(NAN, NAN)
+	var parts := sh.substr(i + cle.length(), sh.find(")", i) - i - cle.length()).split(",")
+	return Vector2(parts[0].to_float(), parts[1].to_float())
+
+
+# ---------------------------------------------------------------------------
+# RR5 — LES EFFETS EN JEU, DU PALIER AU FONDU
+# ---------------------------------------------------------------------------
+
+## Les masques FONDUS que le jeu charge, relatifs à `assets/` : `assets/fondu/<rel>`, et leur jumeau encré `assets/<rel>`.
+func _masques_fondus() -> PackedStringArray:
+	var l := PackedStringArray()
+	for n in range(1, 10):
+		l.append("decals/sang_%d.png" % n)
+		l.append("decals/sang_%d_coeur.png" % n)
+	for n in range(1, 7):
+		l.append("decals/gouttes_sang_%d.png" % n)
+	for n: int in _constante("res://wall_impact.gd", "ECLATS_FONDUS"):
+		l.append("decals/impact_%d.png" % n)
+	l.append("decals/tracante.png")
+	l.append("halo/trainee.png")
+	# Chantier TIR (2026-10-05) : l'aiguille de la balle, qui remplace la traînée ronde dans `bullet.gd`.
+	l.append("decals/aiguille.png")
+	return l
+
+
+## Le nombre de niveaux d'alpha d'un PNG, lu sur le DISQUE (pas dans le cache d'import, comme `test_encrage`) ; -1 s'il ne se
+## lit pas.
+func _niveaux_alpha(chemin: String) -> int:
+	var img := Image.load_from_file(ProjectSettings.globalize_path(chemin))
+	if img == null or img.is_empty():
+		return -1
+	img.convert(Image.FORMAT_RGBA8)
+	var vus := {}
+	var octets := img.get_data()
+	for k in range(3, octets.size(), 4):
+		vus[octets[k]] = true
+	return vus.size()
+
+
+func _les_effets_fondus() -> void:
+	print("— RR5 : les effets en jeu, du palier au fondu")
+	var sans := DrapeauxDeLancement.present(IsoMateriaux.DRAPEAU_SANS_FONDU)
+	var fondus := IsoMateriaux.effets_fondus()
+	_check("%s : les effets %s" % ["--sans-fondu" if sans else ("l'encre" if IsoMateriaux.encre_active() else "le jeu"),
+		"fondus" if fondus else "en paliers"], fondus == (not sans and not IsoMateriaux.encre_active()))
+	# Les fichiers : chaque masque fondu est sur le disque, importé, FONDU (des dizaines de niveaux d'alpha, là où l'encre en a
+	# deux à quatre), et son jumeau encré est là, en paliers — `--sans-fondu` trouve toujours les siens.
+	var manquants := PackedStringArray()
+	var durs := PackedStringArray()
+	var orphelins := PackedStringArray()
+	var masques := _masques_fondus()
+	for rel: String in masques:
+		var fondu := IsoMateriaux.DOSSIER_FONDU + rel
+		var encre := "res://assets/" + rel
+		if not FileAccess.file_exists(fondu) or not ResourceLoader.exists(fondu) or load(fondu) == null:
+			manquants.append(rel)
+			continue
+		var n := _niveaux_alpha(fondu)
+		if n < 32:
+			durs.append("%s (%d niveaux)" % [rel, n])
+		var ne := _niveaux_alpha(encre)
+		if not ResourceLoader.exists(encre) or ne < 1 or ne > 4:
+			orphelins.append("%s (%d niveaux)" % [rel, ne])
+	_check("les %d masques fondus sont là, importés" % masques.size(), manquants.is_empty(), ", ".join(manquants))
+	_check("ils sont FONDUS (32 niveaux d'alpha au moins)", durs.is_empty(), ", ".join(durs))
+	_check("chacun a son jumeau encré, en paliers (deux à quatre niveaux)", orphelins.is_empty(), ", ".join(orphelins))
+	# Le chemin : le jumeau fondu en jeu, l'encré sinon ; un masque sans jumeau (l'éclat 5, dessiné à l'encre seulement) reste
+	# le sien.
+	var attendu := IsoMateriaux.DOSSIER_FONDU + "decals/sang_1.png" if fondus else "res://assets/decals/sang_1.png"
+	_check("le masque d'un effet : %s" % attendu, IsoMateriaux.masque_d_effet("res://assets/decals/sang_1.png") == attendu)
+	_check("un masque sans jumeau fondu reste le sien",
+		IsoMateriaux.masque_d_effet("res://assets/decals/impact_5.png") == "res://assets/decals/impact_5.png"
+		and IsoMateriaux.masque_d_effet("res://blood_stain.gd") == "res://blood_stain.gd")
+	# Les LUMIÈRES ne changent pas (Q92) : aucun masque de lumière n'a de jumeau fondu.
+	var lumieres := PackedStringArray()
+	var chemins_lumiere: Array = [LightTextures.AMBIANTE, LightTextures.RETRODIFFUSION, LightTextures.ECLAT]
+	chemins_lumiere.append_array(LightTextures.FLASH)
+	for chemin: String in chemins_lumiere:
+		if FileAccess.file_exists(IsoMateriaux.DOSSIER_FONDU + chemin.trim_prefix("res://assets/")):
+			lumieres.append(chemin.get_file())
+	_check("aucun masque de lumière n'a de jumeau fondu (halo, rétrodiffusion, éclat, flash de tir : Q92)",
+		lumieres.is_empty() and chemins_lumiere.size() >= 4, ", ".join(lumieres))
+	# Le sang au sol : la planche ET ses mesures, du même jeu (`test_sang_au_sol` mesure celui-là, sur le disque).
+	var sang: GDScript = load("res://blood_stain.gd")
+	var consts := sang.get_script_constant_map()
+	var planches: Array = sang.planches()
+	var du_jeu := true
+	for p: String in planches:
+		du_jeu = du_jeu and p.begins_with(IsoMateriaux.DOSSIER_FONDU) == fondus
+	_check("le sang : %d planches %s, avec leurs mesures" % [planches.size(), "fondues" if fondus else "encrées"],
+		du_jeu and planches.size() == (consts["ECLABOUSSURES"] as Array).size()
+		and (consts["FLAQUES_FONDUES"] as Array).size() == planches.size()
+		and (consts["POIDS_TAILLE_FONDUS"] as Array).size() == planches.size()
+		and sang.flaques() == (consts["FLAQUES_FONDUES"] if fondus else consts["FLAQUES"])
+		and sang.poids_taille() == (consts["POIDS_TAILLE_FONDUS"] if fondus else consts["POIDS_TAILLE"]))
+	var source_sang := FileAccess.get_file_as_string("res://blood_stain.gd")
+	_check("la tache posée lit la planche et les mesures du jeu (jamais les tables encrées en direct)",
+		source_sang.contains("var chemin: String = IsoMateriaux.masque_d_effet(ECLABOUSSURES[i])")
+		and source_sang.contains("_ancre = flaques()[i]") and source_sang.contains("* poids_taille()[i]")
+		and not source_sang.contains("FLAQUES[i]") and not source_sang.contains("POIDS_TAILLE[i]"))
+	# Les gouttes.
+	var gouttes: Array = _constante("res://particle_pool.gd", "GOUTTES_SANG_FONDUES")
+	var gouttes_ok := gouttes.size() == 6
+	for t: Texture2D in gouttes:
+		gouttes_ok = gouttes_ok and t != null and t.resource_path.begins_with(IsoMateriaux.DOSSIER_FONDU)
+	_check("les gouttes : six fondues, tirées au sort parmi celles du jeu", gouttes_ok
+		and FileAccess.get_file_as_string("res://particle_pool.gd").contains(
+			"var gouttes := GOUTTES_SANG_FONDUES if IsoMateriaux.effets_fondus() else GOUTTES_SANG"))
+	# Les éclats des murs, posés pour de vrai.
+	var impact: GDScript = load("res://wall_impact.gd")
+	var vus := {}
+	var hors_jeu := PackedStringArray()
+	for k in 80:
+		var w: Node2D = impact.new()
+		if w.call("setup", Vector2.ZERO):
+			var tex := w.get("_texture") as Texture2D
+			var p := tex.resource_path if tex != null else "?"
+			vus[p] = true
+			if p.begins_with(IsoMateriaux.DOSSIER_FONDU) != fondus:
+				hors_jeu.append(p.get_file())
+		w.free()
+	_check("les éclats posés : %d planches vues, toutes %s" % [vus.size(), "fondues" if fondus else "encrées"],
+		hors_jeu.is_empty() and vus.size() >= 8, ", ".join(hors_jeu))
+	# La traçante et sa traînée.
+	var source_balle := FileAccess.get_file_as_string("res://bullet.gd")
+	# Chantier TIR (2026-10-05) — la traînée ronde (`TRAINEE`) n'est plus dessinée : l'aiguille l'a remplacée, et passe par le
+	# même masque d'effet. Sa garde lit donc l'aiguille.
+	_check("la traçante et l'aiguille passent par le masque d'effet",
+		source_balle.contains("LightTextures.masque(IsoMateriaux.masque_d_effet(CHEMIN_AIGUILLE))")
+		and source_balle.contains("LightTextures.masque(IsoMateriaux.masque_d_effet(\"res://assets/decals/tracante.png\"))"))
+	# Le flash de mort : fondu, la case blanche suit l'intensité ; sinon, ses trois paliers. Toujours sans lire l'écran.
+	var sh := FileAccess.get_file_as_string("res://death_flash.gdshader")
+	_check("le flash de mort : fondu, il suit l'intensité ; sinon ses trois paliers ; aucune texture lue",
+		sh.contains("uniform bool fondu = false;")
+		and sh.contains("\tif (fondu) {\n\t\ta = flash_intensity;\n\t} else if (flash_intensity >= 0.66) {")
+		and not sh.contains("sampler2D"))
+	_check("la mort pose le fondu sur son flash", FileAccess.get_file_as_string("res://player.gd").contains(
+		"\tmat.shader = SHADER_DEATH_FLASH\n\t# Chantier RR, RR5 — le flash fondu en jeu, ses trois paliers sous `--sans-fondu` "
+		+ "(`death_flash.gdshader`).\n\tmat.set_shader_parameter(\"fondu\", IsoMateriaux.effets_fondus())\n"))

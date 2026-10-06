@@ -37,6 +37,10 @@ const IMPACTS := "res://assets/decals/"
 ## construction (l'alpha vient de la luminance), d'où la liste à douze qui
 ## vivait ici. Les fichiers gardent leurs noms : rien d'autre ne change.
 const ECLATS := [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+## Chantier RR, RR5 — les éclats FONDUS (le jeu ; `IsoMateriaux.effets_fondus`) : la planche d'août, lait et poussière
+## photographiques, rendue par l'histoire sous `assets/fondu/decals/` — ses douze panneaux valides, les numéros qu'ils
+## portaient (les quatre brûlures noires n'y ont jamais été). `--sans-fondu` rend les seize éclats d'encre.
+const ECLATS_FONDUS := [1, 2, 3, 4, 7, 8, 11, 12, 13, 14, 15, 16]
 
 ## Plafond d'éclats simultanés. Plus bas que celui du sang (120) parce qu'un
 ## impact mural coûte un tir MANQUÉ : dans un duel serré, ils sont bien plus
@@ -64,8 +68,9 @@ func setup(pos: Vector2) -> bool:
 	visibility_layer = 2
 	light_mask = 1 | 16
 
-	var n: int = ECLATS[randi() % ECLATS.size()]
-	var chemin := IMPACTS + "impact_%d.png" % n
+	var eclats: Array = ECLATS_FONDUS if IsoMateriaux.effets_fondus() else ECLATS
+	var n: int = eclats[randi() % eclats.size()]
+	var chemin := IsoMateriaux.masque_d_effet(IMPACTS + "impact_%d.png" % n)
 	if not ResourceLoader.exists(chemin):
 		push_error("wall_impact : eclat absent — %s " % chemin
 			+ "(cuire avec tools/fabrique_decals.gd, puis : "

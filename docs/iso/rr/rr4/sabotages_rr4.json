@@ -1,0 +1,272 @@
+[
+ {
+  "id": "Y1",
+  "titre": "un rayonnement pas plus large que son halo",
+  "fichiers": [
+   "iso_volumes.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ un rayonnement est plus large que son halo et plus faible que lui (1.0 fois le diamètre, 0.50 fois l'intensité)"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "Y2",
+  "titre": "un rayonnement aussi fort que son halo",
+  "fichiers": [
+   "iso_volumes.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ un rayonnement est plus large que son halo et plus faible que lui (3.0 fois le diamètre, 1.00 fois l'intensité)"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "Y3",
+  "titre": "--sans-rayonnement ignoré",
+  "fichiers": [
+   "iso_volumes.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr_sans_lueurs": {
+    "code": 1,
+    "echecs": [
+     "✗ --sans-rayonnement : le rayonnement éteint"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "Y4",
+  "titre": "l'éclat de bouche oublie son rayonnement",
+  "fichiers": [
+   "iso_volumes.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ _suivre_eclats : trois lueurs, le rayonnement sur le halo doux (?)"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "Y5",
+  "titre": "le rayonnement de l'éclat part d'une autre intensité que son halo (la source oubliée)",
+  "fichiers": [
+   "iso_volumes.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ _suivre_eclats : trois lueurs, le rayonnement sur le halo doux (bout, 30.0, eclat.modulate, 0.8)"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "Y6",
+  "titre": "le rayonnement posé même éteint",
+  "fichiers": [
+   "iso_volumes.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr_sans_lueurs": {
+    "code": 1,
+    "echecs": [
+     "✗ posé pour de vrai : 90 px, intensité 0.00, forme douce, caché"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "Y7",
+  "titre": "le plafonnier perd son rayonnement (deux lueurs, comme avant RR4)",
+  "fichiers": [
+   "iso_volumes.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ _suivre_plafonniers : trois lueurs, le rayonnement sur le halo doux (?)"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   },
+   "test_plafonniers": {
+    "code": 1,
+    "echecs": [
+     "✗ le plafonnier allumé a son luminaire (trois lueurs : le point franc, le halo doux et le rayonnement)  → [\"genre\", \"source\", \"noeuds\", \"mats\", \"retires\"]"
+    ],
+    "bilan": "✗ 1 test(s) en échec",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "Y8",
+  "titre": "la lentille d'une torche perd son rayonnement (deux lueurs, comme avant RR4)",
+  "fichiers": [
+   "iso_volumes.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ _suivre_lentilles_des_joueurs : trois lueurs, le rayonnement sur le halo doux (?)"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   },
+   "test_point_lumineux": {
+    "code": 1,
+    "echecs": [
+     "✗ J1 : trois lueurs au bout du fût, visibles (le point, le halo, le rayonnement)",
+     "✗ J2 : trois lueurs au bout du fût, visibles (le point, le halo, le rayonnement)"
+    ],
+    "bilan": "✗ 2 test(s) en échec",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "P1",
+  "titre": "la poussière éclaircit le faisceau (gain doublé)",
+  "fichiers": [
+   "volume_iso.gdshader"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ en moyenne, le faisceau ne s'éclaircit pas : facteur moyen 1.146 à pleine force (1 ± 0,03)",
+     "✗ il ne s'éteint nulle part (au plus creux 0.85) et ses grains se voient sans éblouir (au plus 9.53)"
+    ],
+    "bilan": "77 vérifications, 2 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "P2",
+  "titre": "la poussière éteint le faisceau entre ses grains (moyenne gardée)",
+  "fichiers": [
+   "volume_iso.gdshader"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ il ne s'éteint nulle part (au plus creux 0.40) et ses grains se voient sans éblouir (au plus 17.80)"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "P3",
+  "titre": "la poussière hors du rayon (après son #endif)",
+  "fichiers": [
+   "volume_iso.gdshader"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ le shader : la poussière au rayon seulement (`FAISCEAU_LUMINEUX`), après sa longueur, une fois"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "P4",
+  "titre": "les couches du rayon ne reçoivent pas la force",
+  "fichiers": [
+   "iso_volumes.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ chaque couche du rayon reçoit la force (`_poser_longueur`)"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "P5",
+  "titre": "le facteur lit le bruit même sans force (la sortie en tête retirée)",
+  "fichiers": [
+   "volume_iso.gdshader"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ sans force, le facteur vaut 1 avant toute lecture (le rayon de Q41, lisse)"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "P6",
+  "titre": "--sans-poussiere ignoré",
+  "fichiers": [
+   "iso_volumes.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr_sans_lueurs": {
+    "code": 1,
+    "echecs": [
+     "✗ --sans-poussiere : la poussière éteinte"
+    ],
+    "bilan": "77 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ }
+]

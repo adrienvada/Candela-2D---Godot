@@ -118,6 +118,17 @@ func _test_planche() -> void:
 	# Subtile : au bord de la planche (2 texels de l'axe = 1 px de monde au-delà du corps), plus de blanc.
 	var bord := img.get_pixel(w - 6, axe - 6)
 	_check("la gaine ne blanchit pas (bord de la tête sous 0,5 d'opacité)", bord.a < 0.5, "%.3f" % bord.a)
+	# RR5 — le jumeau fondu, celui que le jeu charge : même planche, même tête, opacité en dégradé.
+	var fondu: Texture2D = load("res://assets/fondu/decals/aiguille.png")
+	_check("le jumeau fondu se charge (assets/fondu/decals/aiguille.png)", fondu != null)
+	if fondu != null:
+		var imf := fondu.get_image()
+		if imf.is_compressed():
+			imf.decompress()
+		_check("même planche : 256 × 20", imf.get_width() == w and imf.get_height() == h)
+		_check("même tête brûlante (≥ 0,95)", imf.get_pixel(w - 6, axe).a >= 0.95, "%.3f" % imf.get_pixel(w - 6, axe).a)
+		_check("même pourtour transparent", imf.get_pixel(0, axe).a == 0.0 and imf.get_pixel(w - 1, axe).a == 0.0
+			and imf.get_pixel(w / 2, 0).a == 0.0 and imf.get_pixel(w / 2, h - 1).a == 0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +157,8 @@ func _test_aiguille_en_vol(gs: Node) -> void:
 	var aura := b.get_node(^"Aura") as Sprite2D
 	var core := b.get_node(^"Core") as Line2D
 	_check("au départ, l'aiguille est cachée (rien derrière la tête)", not aura.visible)
-	_check("l'aiguille porte la planche cuite", aura.texture == b.AIGUILLE)
+	_check("l'aiguille porte la planche cuite, par le masque d'effet (fondue en jeu, encrée sous --sans-fondu)",
+		aura.texture == LightTextures.masque(IsoMateriaux.masque_d_effet(b.CHEMIN_AIGUILLE)))
 	_check("pas de PointLight2D sur la balle (« balle sans lumière »)", b.find_children("*", "Light2D", true, false).is_empty())
 	# Jusqu'au premier pas de la balle (le signal `physics_frame` part AVANT les `_physics_process`).
 	for i in 4:

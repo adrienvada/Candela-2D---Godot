@@ -183,6 +183,52 @@ const POIDS_TAILLE := [
 	0.655, # sang_9 — flaque de 22,0 px de rayon
 ]
 
+## Chantier RR, RR5 — LES PLANCHES FONDUES (le jeu ; `IsoMateriaux.effets_fondus`) : les neuf mêmes dessins avant leur encrage,
+## rendus par l'histoire sous `assets/fondu/decals/`, avec LEURS mesures — celles d'avant le 2026-09-10, prises sur ces masques
+## mêmes : la plus grande flaque inscrite d'un masque doux n'est pas celle de son encre (sang_1 : 21 px de rayon au lieu de 25).
+## Même règle d'Adrien, même banc : `tools/test_sang_au_sol.gd` mesure le jeu que `planches()` lui donne — fondu, puis encré
+## sous `--sans-fondu`. Même ordre qu'`ECLABOUSSURES`.
+const FLAQUES_FONDUES := [
+	Vector2(0.522, 0.565), # sang_1 — étoile
+	Vector2(0.134, 0.539), # sang_2 — directionnelle
+	Vector2(0.216, 0.489), # sang_3 — directionnelle (éraflure fine)
+	Vector2(0.341, 0.474), # sang_4 — directionnelle (coulure lourde, réorientée)
+	Vector2(0.222, 0.653), # sang_5 — directionnelle (éventail)
+	Vector2(0.503, 0.883), # sang_6 — directionnelle (double bras)
+	Vector2(0.184, 0.881), # sang_7 — directionnelle (traînée espacée)
+	Vector2(0.455, 0.566), # sang_8 — étoile (compacte, réorientée)
+	Vector2(0.409, 0.435), # sang_9 — étoile (irrégulière)
+]
+const POIDS_TAILLE_FONDUS := [
+	0.686, # sang_1 — flaque de 21,0 px de rayon
+	1.000, # sang_2 — flaque de 12,4 px de rayon
+	1.000, # sang_3 — flaque de 6,2 px de rayon
+	0.269, # sang_4 — flaque de 53,6 px de rayon (celle de la capture)
+	0.973, # sang_5 — flaque de 14,8 px de rayon
+	1.000, # sang_6 — flaque de 9,8 px de rayon
+	1.000, # sang_7 — flaque de 8,0 px de rayon
+	0.327, # sang_8 — flaque de 44,0 px de rayon
+	0.667, # sang_9 — flaque de 21,6 px de rayon
+]
+
+
+## Le jeu de planches du moment : fondu en jeu, encré sous `--sans-fondu` ou avec l'encre. `flaques()` et `poids_taille()`
+## rendent les mesures du MÊME jeu.
+static func planches() -> Array:
+	var jeu := []
+	for chemin: String in ECLABOUSSURES:
+		jeu.append(IsoMateriaux.masque_d_effet(chemin))
+	return jeu
+
+
+static func flaques() -> Array:
+	return FLAQUES_FONDUES if IsoMateriaux.effets_fondus() else FLAQUES
+
+
+static func poids_taille() -> Array:
+	return POIDS_TAILLE_FONDUS if IsoMateriaux.effets_fondus() else POIDS_TAILLE
+
+
 ## Distance maximale, en pixels, entre l'AXE du tir et le CENTRE réel du joueur
 ## pour que l'étoile centrée soit éligible au tirage.
 ##
@@ -337,7 +383,7 @@ func setup(base_pos: Vector2, direction: Vector2, distance_axe_centre: float = I
 		# `POIDS_TAILLE` corrige la variation aléatoire, il ne la remplace pas :
 		# une planche dense reste avec sa propre part de hasard, juste ramenée
 		# sous le plafond du corps du joueur.
-		_echelle = randf_range(ECHELLE_MIN, ECHELLE_MAX) * POIDS_TAILLE[i] \
+		_echelle = randf_range(ECHELLE_MIN, ECHELLE_MAX) * poids_taille()[i] \
 			* (1.0 if gerbe else FLAQUE_REDUCTION)
 		queue_redraw()
 		return
@@ -400,7 +446,8 @@ func _choisir_eclaboussure(distance_axe_centre: float) -> int:
 		for j in range(ECLABOUSSURES.size()):
 			candidats.append(j)
 	var i: int = candidats[randi() % candidats.size()]
-	var chemin: String = ECLABOUSSURES[i]
+	# Chantier RR, RR5 — la planche FONDUE en jeu, avec SES mesures (`planches`, plus bas) ; encrée sous `--sans-fondu`.
+	var chemin: String = IsoMateriaux.masque_d_effet(ECLABOUSSURES[i])
 	var coeur := chemin.replace(".png", "_coeur.png")
 	if not ResourceLoader.exists(chemin) or not ResourceLoader.exists(coeur):
 		push_error("blood_stain : eclaboussure absente — %s " % chemin
@@ -409,7 +456,7 @@ func _choisir_eclaboussure(distance_axe_centre: float) -> int:
 		return -1
 	_texture = load(chemin)
 	_coeur = load(coeur)
-	_ancre = FLAQUES[i]
+	_ancre = flaques()[i]
 	return i
 
 
