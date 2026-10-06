@@ -1,0 +1,162 @@
+{
+ "flash-de-tir": {
+  "cadre": [
+   463,
+   166,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVANT — les paliers de la refonte (--sans-fondu)",
+   "RR5 — les effets fondus (le jeu)"
+  ],
+  "allumes_au_dessus_de_8": [
+   81748,
+   81126
+  ],
+  "moyenne_luma_allumee": [
+   38.0,
+   34.9
+  ],
+  "p99_luma_allumee": [
+   197.2,
+   191.3
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   66059
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   21083
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   20461
+  ]
+ },
+ "sang": {
+  "cadre": [
+   465,
+   148,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVANT — les paliers de la refonte (--sans-fondu)",
+   "RR5 — les effets fondus (le jeu)"
+  ],
+  "allumes_au_dessus_de_8": [
+   110240,
+   112070
+  ],
+  "moyenne_luma_allumee": [
+   25.6,
+   26.3
+  ],
+  "p99_luma_allumee": [
+   123.3,
+   125.8
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   5730
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   378
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   2208
+  ]
+ },
+ "impacts": {
+  "cadre": [
+   482,
+   281,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVANT — les paliers de la refonte (--sans-fondu)",
+   "RR5 — les effets fondus (le jeu)"
+  ],
+  "allumes_au_dessus_de_8": [
+   83035,
+   85127
+  ],
+  "moyenne_luma_allumee": [
+   25.6,
+   26.2
+  ],
+  "p99_luma_allumee": [
+   114.4,
+   114.7
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   3935
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   243
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   2335
+  ]
+ },
+ "mort": {
+  "cadre": [
+   328,
+   0,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVANT — les paliers de la refonte (--sans-fondu)",
+   "RR5 — les effets fondus (le jeu)"
+  ],
+  "allumes_au_dessus_de_8": [
+   200725,
+   921600
+  ],
+  "moyenne_luma_allumee": [
+   53.4,
+   23.3
+  ],
+  "p99_luma_allumee": [
+   150.7,
+   111.2
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   867361
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   0
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   720875
+  ]
+ }
+}

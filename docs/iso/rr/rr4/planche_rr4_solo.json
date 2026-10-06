@@ -1,0 +1,122 @@
+{
+ "plafonnier-brute": {
+  "cadre": [
+   352,
+   207,
+   1152,
+   648
+  ],
+  "taille": [
+   1920,
+   1080
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   259137,
+   259243
+  ],
+  "moyenne_luma_allumee": [
+   35.3,
+   36.1
+  ],
+  "p99_luma_allumee": [
+   174.8,
+   174.8
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   13094
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   140
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   246
+  ]
+ },
+ "lumieres-salle09": {
+  "cadre": [
+   365,
+   141,
+   1152,
+   648
+  ],
+  "taille": [
+   1920,
+   1080
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   422650,
+   425751
+  ],
+  "moyenne_luma_allumee": [
+   26.9,
+   28.3
+  ],
+  "p99_luma_allumee": [
+   146.7,
+   147.7
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   35522
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   96
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   3197
+  ]
+ },
+ "brouillage-torche": {
+  "cadre": [
+   376,
+   0,
+   1152,
+   648
+  ],
+  "taille": [
+   1920,
+   1080
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   395198,
+   396752
+  ],
+  "moyenne_luma_allumee": [
+   25.7,
+   26.8
+  ],
+  "p99_luma_allumee": [
+   121.9,
+   121.3
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   24277
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   31
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   1585
+  ]
+ }
+}

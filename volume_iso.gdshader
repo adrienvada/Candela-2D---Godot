@@ -87,6 +87,18 @@ uniform float lissage_rayon = 0.18;
 // couche dans l'air s'éteint. 1e9 (le défaut) : aucune coupure. Posés par `IsoVolumes._poser_longueur`.
 uniform float longueur_air = 1.0e9;
 uniform float fondu_air = 0.25;
+// Chantier RR, RR4 — LA POUSSIÈRE DANS LE FAISCEAU (`IsoVolumes.poussiere_du_faisceau`, posée avec la longueur) : sa force ; 0, le
+// rayon lisse de Q41. Des grains d'environ deux pixels d'écran, ancrés dans le MONDE et qui dérivent lentement avec le temps :
+// un facteur sur l'opacité du rayon, de moyenne 1 — le faisceau se grène, il ne s'éclaircit pas — et nul hors du rayon (il
+// n'existe que là). Rares et vifs : le rayon dans l'air ne pèse que quelques niveaux sur le sol qu'il éclaire, et un grain
+// doux (9 % des cellules, ×2,2 au plus : premier réglage) n'y changeait que ±2,6 niveaux — invisible. Moyenne mesurée sur le
+// bruit lui-même : 3,45 % des cellules passent `POUSSIERE_SEUILS`, d'où le creux et le gain (0,15 / 0,0345 = 4,34).
+uniform float poussiere_faisceau : hint_range(0.0, 1.0) = 0.0;
+const vec2 POUSSIERE_SEUILS = vec2(0.82, 0.94);
+const float POUSSIERE_CREUX = 0.15;
+const float POUSSIERE_GAIN = 4.34;
+const float POUSSIERE_GRAIN_ECRAN = 3.0;
+const vec2 POUSSIERE_DERIVE_PX = vec2(5.2, 3.3);
 #endif
 #ifdef FUMEE_MASQUE
 // ISO13, Q31 — ce que le pixel montre derrière la couche (sol, face ou dessus de mur), jugé comme son propre shader le calcule.
@@ -114,6 +126,18 @@ varying vec3 monde;
 
 // La lightmap moyennée autour de `p` : le point — DÉJÀ LU par l'appelant, jamais relu — et huit
 // lectures sur un cercle de `r` pixels de monde.
+#ifdef FAISCEAU_LUMINEUX
+// Chantier RR, RR4 — le facteur de la poussière au point `px` (voir `poussiere_faisceau`) : 1 sans poussière.
+float poussiere_du_faisceau(vec2 px, float px_ecran) {
+	if (poussiere_faisceau <= 0.0) {
+		return 1.0;
+	}
+	float g = pate_bruit((px + POUSSIERE_DERIVE_PX * TIME) / (POUSSIERE_GRAIN_ECRAN * px_ecran));
+	float grain = smoothstep(POUSSIERE_SEUILS.x, POUSSIERE_SEUILS.y, g);
+	return mix(1.0, 1.0 - POUSSIERE_CREUX + grain * POUSSIERE_GAIN, poussiere_faisceau);
+}
+#endif
+
 vec3 lire_lightmap_lissee(vec2 p, float r, bool deux, vec3 centre_lu) {
 	vec3 s = centre_lu;
 	for (int k = 0; k < 8; k++) {
@@ -177,6 +201,8 @@ void fragment() {
 		// Q75 — la longueur de l'ancienne torche : le rayon s'éteint en douceur de (1 − fondu) × longueur à longueur ;
 		// au-delà, l'opacité vaut zéro et le fragment se jette plus bas, avant toute lecture de lumière.
 		a *= 1.0 - smoothstep(longueur_air * (1.0 - fondu_air), longueur_air, length(px - nuage_centre));
+		// Chantier RR, RR4 — la poussière dans le rayon : de moyenne 1, dans le rayon seulement.
+		a *= poussiere_du_faisceau(px, px_ecran);
 #endif
 	}
 	a = clamp(a, 0.0, 1.0);

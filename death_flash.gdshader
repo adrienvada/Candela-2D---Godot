@@ -19,10 +19,17 @@ shader_type canvas_item;
 // plus de compilation à chaud.
 uniform float flash_intensity : hint_range(0.0, 1.0) = 1.0;
 uniform float aberration_amount = 0.05;
+// Chantier RR, RR5 — le flash FONDU (le jeu ; `IsoMateriaux.effets_fondus`, posé par `player.gd`) : la case blanche suit
+// l'intensité en continu, le geste d'origine — son extinction est celle que règle `player.gd` (DA4.13, l'`expo out`) —, toujours
+// sans relire l'écran. Les paliers n'en étaient que l'arrondi (1 dès 0,66, puis 0,55, puis 0,22, rien sous 0,04). Faux
+// (`--sans-fondu`, l'encre) : les trois paliers de la refonte.
+uniform bool fondu = false;
 
 void fragment() {
 	float a = 0.0;
-	if (flash_intensity >= 0.66) {
+	if (fondu) {
+		a = flash_intensity;
+	} else if (flash_intensity >= 0.66) {
 		a = 1.0;
 	} else if (flash_intensity >= 0.33) {
 		a = 0.55;

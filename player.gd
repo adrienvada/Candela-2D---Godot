@@ -3156,6 +3156,8 @@ func die(killer: Node2D):
 	
 	var mat = ShaderMaterial.new()
 	mat.shader = SHADER_DEATH_FLASH
+	# Chantier RR, RR5 — le flash fondu en jeu, ses trois paliers sous `--sans-fondu` (`death_flash.gdshader`).
+	mat.set_shader_parameter("fondu", IsoMateriaux.effets_fondus())
 	# Curseur CONFORT « Flash de mort » : à zéro, la case blanche ne vient pas.
 	var flash_mort := EffectPolicy.curseur("flash_mort")
 	mat.set_shader_parameter("flash_intensity", flash_mort)

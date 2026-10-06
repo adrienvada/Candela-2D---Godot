@@ -1,0 +1,81 @@
+{
+ "scene": "duel de la règle 278 : --fusee --vue-unique --classe=pompe (tools/cadence_cloud/prise.sh, SECONDES=45, PHYSIQUE=8)",
+ "rendu": "Xvfb + llvmpipe (gl_compatibility), relatif seulement",
+ "A": "--sans-lueur-led (ni encre ni lueur)",
+ "B": "le jeu (la lueur des LED, sans encre)",
+ "prises": [
+  {
+   "rang": 1,
+   "etiquette": "A",
+   "mediane_ms": 267.9,
+   "moyenne_ms": 271.3,
+   "un_pour_cent_bas_ms": 323.1,
+   "images": 166
+  },
+  {
+   "rang": 2,
+   "etiquette": "B",
+   "mediane_ms": 272.7,
+   "moyenne_ms": 274.7,
+   "un_pour_cent_bas_ms": 519.9,
+   "images": 164
+  },
+  {
+   "rang": 3,
+   "etiquette": "B",
+   "mediane_ms": 275.0,
+   "moyenne_ms": 274.8,
+   "un_pour_cent_bas_ms": 323.9,
+   "images": 164
+  },
+  {
+   "rang": 4,
+   "etiquette": "A",
+   "mediane_ms": 277.8,
+   "moyenne_ms": 277.6,
+   "un_pour_cent_bas_ms": 325.1,
+   "images": 163
+  },
+  {
+   "rang": 5,
+   "etiquette": "A",
+   "mediane_ms": 270.8,
+   "moyenne_ms": 273.9,
+   "un_pour_cent_bas_ms": 334.4,
+   "images": 165
+  },
+  {
+   "rang": 6,
+   "etiquette": "B",
+   "mediane_ms": 275.0,
+   "moyenne_ms": 280.8,
+   "un_pour_cent_bas_ms": 332.6,
+   "images": 161
+  },
+  {
+   "rang": 7,
+   "etiquette": "B",
+   "mediane_ms": 275.9,
+   "moyenne_ms": 276.9,
+   "un_pour_cent_bas_ms": 337.3,
+   "images": 163
+  },
+  {
+   "rang": 8,
+   "etiquette": "A",
+   "mediane_ms": 270.8,
+   "moyenne_ms": 275.4,
+   "un_pour_cent_bas_ms": 319.0,
+   "images": 164
+  }
+ ],
+ "verdict": {
+  "moyenne_A_ms": 274.5,
+  "moyenne_B_ms": 276.8,
+  "cadence_B_sur_A": 0.992,
+  "delta_ms": 2.3,
+  "erreur_type_A_ms": 1.3,
+  "erreur_type_B_ms": 1.4,
+  "regle": "cadence ≥ 0,970 : tenue"
+ }
+}

@@ -56,6 +56,8 @@ uniform float temperature_seuil_haut : hint_range(0.0, 1.0) = 0.0;
 // ISO7b — 1 : la neutralité qui dose la chaleur se lit sur la lightmap AVANT la pâte (`pate_poids_neutre`), et une
 // lumière colorée garde sa teinte. 0 : mesurée après la pâte, comme au commit db26c43 (le halo de fusée jaunissait).
 uniform float neutre_avant_pate : hint_range(0.0, 1.0) = 0.0;
+// Chantier RR, RR2 — la lumière peinte (`pate_courbe`, `iso_pate.gdshaderinc`) : sa force ; 0, la lumière telle quelle.
+uniform float courbe : hint_range(0.0, 1.0) = 0.0;
 // ISO7b — des dalles, pas une grille. `dalles` à 0 : le sol d'ISO7 exactement.
 uniform float dalles : hint_range(0.0, 1.0) = 0.0;
 uniform float tuile_px = 35.0;
@@ -334,6 +336,8 @@ void fragment() {
 		// ajoutée : la LED, le halo de proximité et le pied de la lampe sont DANS la lightmap que la 2D affiche.
 		vec3 c2d = lightmap_pateuse_sol(px_lu, px, aa, deux);
 		c2d = pate_facteur(c2d, matiere * dalle);
+		// Chantier RR, RR2 — la lumière peinte, avant la température, sur l'octet : rien ne bouge sous le pied.
+		c2d = pate_courbe(c2d, courbe);
 		// ISO7b — graduée : `temperature_seuil_haut` à 0 rend la température d'ISO7 (teinte chaude partout) ; la
 		// neutralité lue avant la pâte (`neutre_avant_pate`) garde sa teinte à une lumière colorée. Le ton du damier
 		// est un facteur gris : il ne change pas la neutralité, la lecture brute suffit.

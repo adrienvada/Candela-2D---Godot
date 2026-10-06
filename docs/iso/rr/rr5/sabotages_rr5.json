@@ -1,0 +1,240 @@
+[
+ {
+  "id": "F1",
+  "titre": "l'encre ne rend plus les paliers (seul --sans-fondu les rend)",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr_avec_encre": {
+    "code": 1,
+    "echecs": [
+     "✗ l'encre : les effets fondus"
+    ],
+    "bilan": "91 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "F2",
+  "titre": "--sans-fondu ignoré",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr_sans_fondu": {
+    "code": 1,
+    "echecs": [
+     "✗ --sans-fondu : les effets fondus"
+    ],
+    "bilan": "91 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "F3",
+  "titre": "le masque d'effet ne rend jamais le jumeau fondu",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ le masque d'un effet : res://assets/fondu/decals/sang_1.png",
+     "✗ le sang : 9 planches fondues, avec leurs mesures",
+     "✗ les éclats posés : 12 planches vues, toutes fondues  → impact_4.png, impact_16.png, impact_13.png, impact_7.png, impact_7.png, impact_3.png, impact_12.png, impact_15.png, impact_11.png, impact_3.png, impact_14.png, impact_2.png, impact_11.png, impact_3.png, impact_7.png, impact_16.png, impact_4.png, impact_1.png, impact_4.png, impact_1.png, impact_12.png, impact_11.png, impact_1.png, impact_7.png, impact_7.png, impact_4.png, impact_14.png, impact_3.png, impact_8.png, impact_8.png, impact_1.png, impact_2.png, impact_4.png, impact_15.png, impact_12.png, impact_13.png, impact_14.png, impact_12.png, impact_16.png, impact_14.png, impact_3.png, impact_12.png, impact_16.png, impact_7.png, impact_14.png, impact_4.png, impact_14.png, impact_12.png, impact_15.png, impact_3.png, impact_7.png, impact_12.png, impact_8.png, impact_8.png, impact_13.png, impact_2.png, impact_8.png, impact_1.png, impact_16.png, impact_1.png, impact_1.png, impact_12.png, impact_13.png, impact_7.png, impact_1.png, impact_12.png, impact_13.png, impact_12.png, impact_15.png, impact_3.png, impact_14.png, impact_1.png, impact_3.png, impact_1.png, impact_16.png, impact_8.png, impact_2.png, impact_2.png, impact_2.png, impact_7.png"
+    ],
+    "bilan": "91 vérifications, 3 échec(s)",
+    "script_errors": 0
+   },
+   "test_sang_au_sol": {
+    "code": 1,
+    "echecs": [
+     "✗ sang_1.png : sa flaque tient dans le corps même au pire tirage  → 42.9 px de diamètre au pire cas, pour un corps de 36.0 px",
+     "✗ sang_8.png : sa flaque tient dans le corps même au pire tirage  → 37.9 px de diamètre au pire cas, pour un corps de 36.0 px",
+     "✗ sang_9.png : sa flaque tient dans le corps même au pire tirage  → 36.7 px de diamètre au pire cas, pour un corps de 36.0 px",
+     "✗ sang_1.png : la table dit où est vraiment sa flaque  → table (0.522, 0.565), mesuré (0.534375, 0.526923)",
+     "✗ sang_6.png : la table dit où est vraiment sa flaque  → table (0.503, 0.883), mesuré (0.534375, 0.909396)",
+     "✗ sang_8.png : la table dit où est vraiment sa flaque  → table (0.455, 0.566), mesuré (0.461783, 0.546875)",
+     "✗ sang_9.png : la table dit où est vraiment sa flaque  → table (0.409, 0.435), mesuré (0.428125, 0.429032)"
+    ],
+    "bilan": "✗ 7 échecs sur 134 contrôles",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "F4",
+  "titre": "la tache posée lit l'ancre encrée en direct",
+  "fichiers": [
+   "blood_stain.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ la tache posée lit la planche et les mesures du jeu (jamais les tables encrées en direct)"
+    ],
+    "bilan": "91 vérifications, 1 échec(s)",
+    "script_errors": 0
+   },
+   "test_sang_au_sol": {
+    "code": 0,
+    "echecs": [],
+    "bilan": "✓ 134 contrôles passent",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "F5",
+  "titre": "une mesure fondue fausse (sang_1 reçoit la flaque de son encre)",
+  "fichiers": [
+   "blood_stain.gd"
+  ],
+  "rouges": {
+   "test_sang_au_sol": {
+    "code": 1,
+    "echecs": [
+     "✗ sang_1.png : la table dit où est vraiment sa flaque  → table (0.534, 0.527), mesuré (0.521875, 0.565385)"
+    ],
+    "bilan": "✗ 1 échecs sur 134 contrôles",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "F6",
+  "titre": "les gouttes restent encrées",
+  "fichiers": [
+   "particle_pool.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ les gouttes : six fondues, tirées au sort parmi celles du jeu"
+    ],
+    "bilan": "91 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "F7",
+  "titre": "les éclats tirés parmi les seize d'encre même fondus (quatre sans jumeau)",
+  "fichiers": [
+   "wall_impact.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ les éclats posés : 15 planches vues, toutes fondues  → impact_10.png, impact_9.png, impact_6.png, impact_9.png, impact_5.png, impact_5.png, impact_5.png, impact_9.png, impact_9.png, impact_10.png, impact_6.png, impact_9.png, impact_10.png, impact_10.png, impact_6.png, impact_10.png, impact_10.png, impact_10.png, impact_9.png, impact_10.png, impact_6.png, impact_9.png, impact_5.png"
+    ],
+    "bilan": "91 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "F8",
+  "titre": "la traçante contourne le masque d'effet",
+  "fichiers": [
+   "bullet.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ la traçante et sa traînée passent par le masque d'effet"
+    ],
+    "bilan": "91 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "F9",
+  "titre": "le flash de mort garde ses paliers même fondu",
+  "fichiers": [
+   "death_flash.gdshader"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ le flash de mort : fondu, il suit l'intensité ; sinon ses trois paliers ; aucune texture lue"
+    ],
+    "bilan": "91 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "F10",
+  "titre": "la mort oublie de poser le fondu sur son flash",
+  "fichiers": [
+   "player.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ la mort pose le fondu sur son flash"
+    ],
+    "bilan": "91 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "F11",
+  "titre": "un masque « fondu » qui est l'encre (sang_3 recopié de son jumeau)",
+  "fichiers": [
+   "assets/fondu/decals/sang_3.png"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ ils sont FONDUS (32 niveaux d'alpha au moins)  → decals/sang_3.png (2 niveaux)"
+    ],
+    "bilan": "91 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "F12",
+  "titre": "un masque de LUMIÈRE reçoit un jumeau fondu (la rétrodiffusion, Q92)",
+  "fichiers": [
+   "assets/fondu/halo/retrodiffusion_corona.png"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ aucun masque de lumière n'a de jumeau fondu (halo, rétrodiffusion, éclat, flash de tir : Q92)  → retrodiffusion_corona.png"
+    ],
+    "bilan": "91 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ }
+]

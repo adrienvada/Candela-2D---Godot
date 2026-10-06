@@ -1,0 +1,164 @@
+{
+ "plafonnier-brute": {
+  "cadre": [
+   356,
+   232,
+   1152,
+   648
+  ],
+  "taille": [
+   1920,
+   1080
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   229016,
+   222247,
+   259159,
+   437562
+  ],
+  "moyenne_luma_allumee": [
+   37.2,
+   36.9,
+   35.3,
+   31.9
+  ],
+  "p99_luma_allumee": [
+   174.8,
+   174.8,
+   174.8,
+   172.3
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   8416,
+   32258,
+   257384
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   6804,
+   6334,
+   285
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   35,
+   36477,
+   208831
+  ]
+ },
+ "lumieres-salle09": {
+  "cadre": [
+   374,
+   131,
+   1152,
+   648
+  ],
+  "taille": [
+   1920,
+   1080
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   370529,
+   358342,
+   422713,
+   758936
+  ],
+  "moyenne_luma_allumee": [
+   28.2,
+   27.3,
+   26.9,
+   27.0
+  ],
+  "p99_luma_allumee": [
+   157.3,
+   157.0,
+   146.9,
+   119.5
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   17856,
+   58608,
+   510836
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   12277,
+   11461,
+   2319
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   90,
+   63645,
+   390726
+  ]
+ },
+ "brouillage-torche": {
+  "cadre": [
+   377,
+   0,
+   1152,
+   648
+  ],
+  "taille": [
+   1920,
+   1080
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   309508,
+   293320,
+   395219,
+   704362
+  ],
+  "moyenne_luma_allumee": [
+   28.2,
+   26.2,
+   25.7,
+   29.5
+  ],
+  "p99_luma_allumee": [
+   153.8,
+   138.1,
+   121.8,
+   120.2
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   24004,
+   84696,
+   573384
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   16304,
+   14965,
+   2203
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   116,
+   100676,
+   397057
+  ]
+ }
+}

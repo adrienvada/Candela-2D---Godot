@@ -1,0 +1,434 @@
+{
+ "duel": {
+  "cadre": [
+   477,
+   158,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   57440,
+   50903,
+   66614,
+   143618
+  ],
+  "moyenne_luma_allumee": [
+   25.0,
+   22.3,
+   26.4,
+   30.5
+  ],
+  "p99_luma_allumee": [
+   134.7,
+   125.8,
+   123.8,
+   128.0
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   21759,
+   32922,
+   128149
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   21143,
+   12633,
+   164
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   14606,
+   21807,
+   86342
+  ]
+ },
+ "torche": {
+  "cadre": [
+   481,
+   155,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   49449,
+   44633,
+   59808,
+   134504
+  ],
+  "moyenne_luma_allumee": [
+   22.0,
+   18.4,
+   24.1,
+   29.7
+  ],
+  "p99_luma_allumee": [
+   137.8,
+   126.7,
+   124.8,
+   129.0
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   5688,
+   22051,
+   126552
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   5015,
+   4237,
+   220
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   199,
+   14596,
+   85275
+  ]
+ },
+ "volume": {
+  "cadre": [
+   415,
+   142,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   77806,
+   74191,
+   85852,
+   137841
+  ],
+  "moyenne_luma_allumee": [
+   34.4,
+   31.0,
+   33.9,
+   40.5
+  ],
+  "p99_luma_allumee": [
+   170.0,
+   139.7,
+   136.5,
+   155.8
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   7309,
+   23369,
+   124018
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   3624,
+   3170,
+   164
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   9,
+   11216,
+   60199
+  ]
+ },
+ "retrodiffusion": {
+  "cadre": [
+   267,
+   141,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   115411,
+   111546,
+   123698,
+   172274
+  ],
+  "moyenne_luma_allumee": [
+   32.8,
+   30.9,
+   32.8,
+   40.0
+  ],
+  "p99_luma_allumee": [
+   148.2,
+   127.0,
+   122.8,
+   133.5
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   6390,
+   23030,
+   133996
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   3904,
+   3407,
+   143
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   39,
+   11694,
+   57006
+  ]
+ },
+ "flash-de-tir": {
+  "cadre": [
+   477,
+   149,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   69999,
+   68629,
+   82457,
+   159287
+  ],
+  "moyenne_luma_allumee": [
+   37.6,
+   36.4,
+   36.9,
+   35.9
+  ],
+  "p99_luma_allumee": [
+   195.2,
+   186.5,
+   178.1,
+   164.6
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   47431,
+   68906,
+   129708
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   27982,
+   24788,
+   4431
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   26612,
+   37246,
+   93719
+  ]
+ },
+ "fusee": {
+  "cadre": [
+   480,
+   182,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   282042,
+   279452,
+   287606,
+   321860
+  ],
+  "moyenne_luma_allumee": [
+   37.8,
+   36.7,
+   37.6,
+   42.8
+  ],
+  "p99_luma_allumee": [
+   182.9,
+   169.0,
+   170.3,
+   173.9
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   7243,
+   23491,
+   140070
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   2676,
+   2310,
+   223
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   86,
+   7874,
+   40041
+  ]
+ },
+ "sang": {
+  "cadre": [
+   444,
+   83,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   96618,
+   95480,
+   107181,
+   200904
+  ],
+  "moyenne_luma_allumee": [
+   24.2,
+   23.8,
+   25.1,
+   26.9
+  ],
+  "p99_luma_allumee": [
+   128.1,
+   129.9,
+   121.7,
+   107.0
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   10885,
+   23401,
+   138986
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   4892,
+   5211,
+   506
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   3754,
+   15774,
+   104792
+  ]
+ },
+ "impacts": {
+  "cadre": [
+   461,
+   184,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   69500,
+   66007,
+   80638,
+   158111
+  ],
+  "moyenne_luma_allumee": [
+   23.5,
+   22.1,
+   25.2,
+   30.1
+  ],
+  "p99_luma_allumee": [
+   119.4,
+   117.7,
+   114.8,
+   114.8
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   9475,
+   25644,
+   131456
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   5778,
+   5598,
+   208
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   2285,
+   16736,
+   88819
+  ]
+ }
+}

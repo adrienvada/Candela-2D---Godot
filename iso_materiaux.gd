@@ -102,24 +102,80 @@ static func encre_essai_active() -> bool:
 	return DrapeauxDeLancement.present(DRAPEAU_ENCRE_ESSAI) and encre_active()
 
 
-## Chantier RR, étape RR1 — L'ESSAI SANS ENCRE (`--sans-encre`, éteint par défaut ; Adrien, 2026-10-05 : « Essayons de voir
-## les graphismes en annulant, en jeu […] cette pâte roman graphique »). Retire l'ENCRE du rendu en jeu : les traits noirs —
-## les arêtes des murs et le bord des murets (`encre_arete_reste` à 1, un trait qui n'assombrit plus rien — la largeur seule
-## ne suffit pas, le muret la relève à un pixel), les arêtes des corps, des objets et du leurre (`encre_arete` à 0), le trait
-## de la fumée (encre « aucune », `IsoNuageVoxel`) — et le trait halogène des masses de murs (`MurEncre`, lu par la lightmap ;
-## « les murs au trait », refonte roman graphique, 2026-09-11). ⚠️ **Ce dernier n'est pas qu'un style** : clair, il est le
-## seul à prendre la lumière des bandeaux LED loin de la torche — sans lui, le contour des murs ne se voit plus dans le noir
-## (planche de RR1, plan « torche » : 2 845 pixels éteints à plus de 120 px de toute lumière vive, luma 12 en moyenne).
-## Garde la matière, la température, le contact, le liseré du sommet (la lumière de la face, pas un trait), le lavis au pied
-## des murs (une ombre de contact), les joints des dalles, les liserés de lisibilité des corps (tenue `sombre3`, corps de soi)
-## et les bandeaux LED eux-mêmes. Posé dans les `accorder_*`, jamais après coup : les volumes recopient les réglages des murs
-## à leur création, et `accorder_corps` est rejoué à chaque reconstruction d'un corps. L'emporte sur `--encre-essai`. Lu à
-## l'exécution, jamais écrit dans un réglage : ce n'est pas un choix du joueur.
+## Chantier RR — L'ENCRE DU RENDU EN JEU, devenue l'EXCEPTION à RR3 (Q90 = (b), Adrien, 2026-10-05 : « Q90 : ok » ; essayée à
+## RR1 sous `--sans-encre`, « Essayons de voir les graphismes en annulant, en jeu […] cette pâte roman graphique »). L'encre, ce
+## sont les traits noirs — les arêtes des murs et le bord des murets (`encre_arete_reste` à 1, un trait qui n'assombrit plus
+## rien — la largeur seule ne suffit pas, le muret la relève à un pixel), les arêtes des corps, des objets et du leurre
+## (`encre_arete` à 0), le trait de la fumée (encre « aucune », `IsoNuageVoxel`) — et le trait halogène des masses de murs
+## (`MurEncre`, lu par la lightmap ; « les murs au trait », refonte roman graphique, 2026-09-11). ⚠️ **Ce dernier n'était pas
+## qu'un style** : clair, il était seul à prendre la lumière des bandeaux LED loin de la torche — sans lui, le contour des murs
+## disparaissait dans le noir (planche de RR1, plan « torche » : 2 845 pixels éteints à plus de 120 px de toute lumière vive).
+## Q90 = (b) le remplace par la lueur RÉELLE des LED au pied et sur la face des murs (`lueur_led`, plus bas).
+## Restent, encre éteinte : la matière, la température, le contact, le liseré du sommet (la lumière de la face, pas un trait),
+## le lavis au pied des murs (une ombre de contact), les joints des dalles, les liserés de lisibilité des corps (tenue
+## `sombre3`, corps de soi) et les bandeaux LED. Posé dans les `accorder_*`, jamais après coup : les volumes recopient les
+## réglages des murs à leur création, et `accorder_corps` est rejoué à chaque reconstruction d'un corps.
+## `--avec-encre` remet l'encre, et le trait des murs à la place de la lueur des LED (le rendu de RR2 ; avec `--pate D`, celui
+## d'avant RR1). `--encre-essai` (l'encre renforcée d'ISO13) l'implique. `--sans-encre` reste lu et l'emporte sur les deux :
+## les commandes et les bancs qui le passent gardent leur sens. Lu à l'exécution, jamais écrit dans un réglage : ce n'est pas
+## un choix du joueur.
 const DRAPEAU_SANS_ENCRE := "--sans-encre"
+const DRAPEAU_AVEC_ENCRE := "--avec-encre"
 
 
 static func encre_active() -> bool:
-	return not DrapeauxDeLancement.present(DRAPEAU_SANS_ENCRE)
+	if DrapeauxDeLancement.present(DRAPEAU_SANS_ENCRE):
+		return false
+	return DrapeauxDeLancement.present(DRAPEAU_AVEC_ENCRE) or DrapeauxDeLancement.present(DRAPEAU_ENCRE_ESSAI)
+
+
+## Chantier RR, RR3 — LA LUEUR DES LED AU PIED DES MURS (Q90 = (b)) : la bande de `MurLed` éclaire le pied de chaque face qui
+## la borde, par en dessous, et la lueur s'éteint en montant (`mur_iso.gdshader`, `lumiere_des_led`) — un bandeau réel posé au
+## pied d'un mur. Un FACTEUR sur la lumière que la face lit à son pied, jamais un terme (la règle d'ISO7 : tout ce qui s'ajoute
+## multiplie une lumière lue) : `1 + LUEUR_LED × e^(−h / LUEUR_LED_PX) × part`, où `part` est la part de la bande dans cette
+## lumière — sous une torche, la torche n'est pas relevée ; sans lumière au pied, rien. En lumière linéaire (`pate_facteur`) :
+## 10 au ras du sol relève l'octet d'environ quatre fois (15/255 → 65/255, la bande à mi-souffle). Elle ne montre QUE la
+## lumière des LED : éteintes (le creux de la respiration), aucune lueur ; une face sans bande (l'enceinte côté vide) n'en a
+## jamais. C'est l'information que donnait le trait — où sont les murs, au rythme des LED, pour les deux joueurs (la bande
+## n'a pas d'ombre) —, sans le trait. Éteinte sans beauté, et sous `--avec-encre` (le trait revient à sa place) ;
+## `--sans-lueur-led` : ni l'un ni l'autre, l'essai sans encre de RR1, pour comparer.
+const LUEUR_LED := 10.0
+const LUEUR_LED_PX := 8.0
+const DRAPEAU_SANS_LUEUR_LED := "--sans-lueur-led"
+
+
+static func lueur_led() -> float:
+	if not beaute_active() or encre_active() or DrapeauxDeLancement.present(DRAPEAU_SANS_LUEUR_LED):
+		return 0.0
+	return LUEUR_LED
+
+
+## Chantier RR, RR5 — LES EFFETS EN JEU, DU PALIER AU FONDU (Q83, Adrien, 2026-10-05 : « brute, sans paliers » ; puis « plus
+## réaliste, plus fluide »). La refonte roman graphique avait encré les masques des effets (lot 1, 2026-09-10 : sang au sol,
+## gouttes, éclats des murs, traçante) et mis le flash de mort en trois paliers (lot 3) ; l'ordre 54 (2026-09-15) refusait de
+## rouvrir cette règle. RR5 la rouvre EN JEU SEULEMENT — ces effets n'existent qu'en partie, aucun menu ne les charge : les
+## masques d'avant l'encrage, rendus par l'histoire (`ef65d71f^`), vivent sous `assets/fondu/`, au même chemin relatif que
+## leur jumeau encré, qui reste en place et que `test_encrage` garde toujours. `--sans-fondu` rend les paliers (comparer) ;
+## l'encre (`--avec-encre`, `--encre-essai`) les rend aussi : les paliers SONT l'encre de ces effets.
+##
+## ⚠️ **Les masques de LUMIÈRE ne changent pas** : le halo de proximité, la rétrodiffusion et la lumière du flash de tir
+## éclairent pour de vrai — les capteurs des corps les rendent, la perception du bot est étalonnée sur eux. Une règle de jeu,
+## pas un rendu : Q92.
+const DRAPEAU_SANS_FONDU := "--sans-fondu"
+const DOSSIER_FONDU := "res://assets/fondu/"
+
+
+static func effets_fondus() -> bool:
+	return not encre_active() and not DrapeauxDeLancement.present(DRAPEAU_SANS_FONDU)
+
+
+## Le masque d'un effet en jeu : son jumeau FONDU (`assets/fondu/`, même chemin relatif) quand les effets sont fondus et qu'il
+## existe ; sinon le masque encré, inchangé.
+static func masque_d_effet(chemin: String) -> String:
+	if not effets_fondus() or not chemin.begins_with("res://assets/"):
+		return chemin
+	var fondu := DOSSIER_FONDU + chemin.trim_prefix("res://assets/")
+	return fondu if ResourceLoader.exists(fondu) else chemin
 
 
 ## Les variantes des shaders iso compilées avec un `#define` d'essai, une par shader d'origine et par drapeau.
@@ -241,9 +297,13 @@ static func accorder_mur(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("encre_plancher_affiche", ENCRE_PLANCHER_AFFICHE)
 	materiau.set_shader_parameter("lisere_sommet_px", LISERE_SOMMET_PX if active else 0.0)
 	materiau.set_shader_parameter("temperature", (TEMPERATURE_GRADUEE if active else 0.0))
+	materiau.set_shader_parameter("courbe", courbe_lumiere())
 	materiau.set_shader_parameter("temperature_seuil_bas", TEMPERATURE_SEUIL_BAS)
 	materiau.set_shader_parameter("temperature_seuil_haut", TEMPERATURE_SEUIL_HAUT if active else 0.0)
 	materiau.set_shader_parameter("neutre_avant_pate", 1.0 if active else 0.0)
+	# Chantier RR, RR3 — la lueur des LED (Q90 = (b)) ; la bande et sa couleur du moment, la présentation les pose à chaque image.
+	materiau.set_shader_parameter("led_lueur", lueur_led())
+	materiau.set_shader_parameter("led_lueur_px", LUEUR_LED_PX)
 	materiau.set_shader_parameter("pied", PIED_FACE_PX)
 	materiau.set_shader_parameter("lambert_plancher", LAMBERT_PLANCHER if active else 1.0)
 	materiau.set_shader_parameter("lambert_pas_px", LAMBERT_PAS_PX)
@@ -380,6 +440,24 @@ const TEMPERATURE_GRADUEE := 0.8
 const TEMPERATURE_SEUIL_BAS := 0.08
 const TEMPERATURE_SEUIL_HAUT := 0.45
 
+## Chantier RR, RR2 — LA LUMIÈRE PEINTE (`pate_courbe`, `iso_pate.gdshaderinc`) : la force de la courbe sur le sol, les murs et
+## la fumée, juste avant la température. Sous son pied (luminance ÉCRITE 0,06, soit 15/255 — ~9/255 à l'écran), rien ne bouge
+## — la lueur faible et le noir ; au-dessus, les mi-tons et les cœurs relevés, le cœur pâli vers le blanc chaud. Éteinte sans beauté,
+## comme la température. `--sans-courbe` : la brute de RR1, pour comparer. `--courbe=<force>` (build de débogage) : les planches.
+const COURBE_LUMIERE := 0.6
+const DRAPEAU_SANS_COURBE := "--sans-courbe"
+const DRAPEAU_COURBE := "--courbe="
+
+
+static func courbe_lumiere() -> float:
+	if not beaute_active() or DrapeauxDeLancement.present(DRAPEAU_SANS_COURBE):
+		return 0.0
+	if OS.is_debug_build():
+		for a: String in DrapeauxDeLancement.arguments():
+			if a.begins_with(DRAPEAU_COURBE) and a.trim_prefix(DRAPEAU_COURBE).is_valid_float():
+				return clampf(a.trim_prefix(DRAPEAU_COURBE).to_float(), 0.0, 1.0)
+	return COURBE_LUMIERE
+
 ## ISO7b — la face prend la direction de la lumière (`mur_iso.gdshader`, gradient de la lightmap devant elle).
 ## Plancher 0,4 : une face de profil garde 40 % de la lumière qu'elle reçoit, pour rester lisible (brief :
 ## 0,35 à 0,45). Pas d'une tuile : le gradient se lit à l'échelle d'une tuile, pas du grain de la lightmap.
@@ -433,6 +511,7 @@ static func accorder_sol(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("temperature_seuil_bas", TEMPERATURE_SEUIL_BAS)
 	materiau.set_shader_parameter("temperature_seuil_haut", TEMPERATURE_SEUIL_HAUT if active else 0.0)
 	materiau.set_shader_parameter("neutre_avant_pate", 1.0 if active else 0.0)
+	materiau.set_shader_parameter("courbe", courbe_lumiere())
 	materiau.set_shader_parameter("dalles", 1.0 if active else 0.0)
 	materiau.set_shader_parameter("tuile_px", float(CandelaTileSet.TILE_SIZE.x))
 	materiau.set_shader_parameter("joint_2d_px", 1.0)

@@ -122,10 +122,11 @@ func _en_jeu() -> void:
 			continue
 		var noeuds: Array = e["noeuds"]
 		var attendu: Vector3 = (pointe["position"] as Vector3) + (pointe["direction"] as Vector3) * IsoVolumes.AVANT_DU_VERRE_PX
-		var tous := noeuds.size() == 2
+		# Chantier RR, RR4 — trois lueurs : le point, le halo doux et le rayonnement (`IsoVolumes._poser_rayonnement`), au même lieu.
+		var tous := noeuds.size() == 3
 		for mi: MeshInstance3D in noeuds:
-			tous = tous and mi.visible and mi.global_position.distance_to(attendu) < 0.01
-		_check("J%d : deux lueurs au bout du fût, visibles" % (pid + 1), tous)
+			tous = tous and (mi.visible or not IsoVolumes.rayonnement_actif()) and mi.global_position.distance_to(attendu) < 0.01
+		_check("J%d : trois lueurs au bout du fût, visibles (le point, le halo, le rayonnement)" % (pid + 1), tous)
 		var orientees := true
 		for m: ShaderMaterial in e["mats"]:
 			orientees = orientees and bool(m.get_shader_parameter("lentille_orientee")) \

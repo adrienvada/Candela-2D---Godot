@@ -1,0 +1,322 @@
+{
+ "duel": {
+  "cadre": [
+   490,
+   172,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   67662,
+   67834
+  ],
+  "moyenne_luma_allumee": [
+   26.6,
+   26.5
+  ],
+  "p99_luma_allumee": [
+   124.7,
+   123.9
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   3117
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   1323
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   1495
+  ]
+ },
+ "torche": {
+  "cadre": [
+   505,
+   166,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   59813,
+   59810
+  ],
+  "moyenne_luma_allumee": [
+   24.1,
+   24.0
+  ],
+  "p99_luma_allumee": [
+   124.7,
+   123.7
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   69
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   8
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   5
+  ]
+ },
+ "volume": {
+  "cadre": [
+   404,
+   131,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   85838,
+   86189
+  ],
+  "moyenne_luma_allumee": [
+   33.9,
+   33.9
+  ],
+  "p99_luma_allumee": [
+   136.0,
+   135.5
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   2094
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   44
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   395
+  ]
+ },
+ "retrodiffusion": {
+  "cadre": [
+   300,
+   128,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   123694,
+   124026
+  ],
+  "moyenne_luma_allumee": [
+   32.8,
+   32.7
+  ],
+  "p99_luma_allumee": [
+   122.9,
+   123.0
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   2850
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   48
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   380
+  ]
+ },
+ "flash-de-tir": {
+  "cadre": [
+   482,
+   167,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   79930,
+   81256
+  ],
+  "moyenne_luma_allumee": [
+   37.1,
+   37.9
+  ],
+  "p99_luma_allumee": [
+   179.6,
+   197.4
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   41604
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   11699
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   13025
+  ]
+ },
+ "fusee": {
+  "cadre": [
+   479,
+   191,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   287609,
+   287937
+  ],
+  "moyenne_luma_allumee": [
+   37.7,
+   37.6
+  ],
+  "p99_luma_allumee": [
+   170.7,
+   169.1
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   1615
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   45
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   373
+  ]
+ },
+ "sang": {
+  "cadre": [
+   465,
+   146,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   108950,
+   109647
+  ],
+  "moyenne_luma_allumee": [
+   25.6,
+   25.6
+  ],
+  "p99_luma_allumee": [
+   124.9,
+   124.7
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   8112
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   1817
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   2514
+  ]
+ },
+ "impacts": {
+  "cadre": [
+   483,
+   270,
+   768,
+   432
+  ],
+  "taille": [
+   1280,
+   720
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   81546,
+   83606
+  ],
+  "moyenne_luma_allumee": [
+   25.5,
+   25.8
+  ],
+  "p99_luma_allumee": [
+   115.2,
+   114.5
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   4659
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   819
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   2879
+  ]
+ }
+}

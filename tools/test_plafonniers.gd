@@ -880,8 +880,9 @@ func _luminaire_iso() -> void:
 	var vus := {}
 	volumes.call("_suivre_plafonniers", main, vus)
 	var e: Dictionary = volumes.suivi_de(poses[0], 1)
-	_check("le plafonnier allumé a son luminaire (deux lueurs : le point franc et le halo doux)",
-		not e.is_empty() and String(e["genre"]) == "plafonnier" and (e["noeuds"] as Array).size() == 2, str(e.keys()))
+	# Chantier RR, RR4 — et son rayonnement, une troisième lueur large et faible (`IsoVolumes._poser_rayonnement`).
+	_check("le plafonnier allumé a son luminaire (trois lueurs : le point franc, le halo doux et le rayonnement)",
+		not e.is_empty() and String(e["genre"]) == "plafonnier" and (e["noeuds"] as Array).size() == 3, str(e.keys()))
 	var point: MeshInstance3D = (e["noeuds"] as Array)[1] if not e.is_empty() else null
 	_check("posé au-dessus de sa flaque, à la hauteur de la lampe (52,5 px), à sa place 2D",
 		point != null and absf(point.position.y - Plafonnier.HAUTEUR_TUILES * TUILE) < 0.01

@@ -57,6 +57,16 @@ const GOUTTES_SANG: Array[Texture2D] = [
 	preload("res://assets/decals/gouttes_sang_5.png"),
 	preload("res://assets/decals/gouttes_sang_6.png"),
 ]
+## Chantier RR, RR5 — les mêmes six gouttes, FONDUES (le jeu ; `IsoMateriaux.effets_fondus`) : d'avant l'encrage, rendues par
+## l'histoire sous `assets/fondu/decals/`. `--sans-fondu` rend les gouttes encrées.
+const GOUTTES_SANG_FONDUES: Array[Texture2D] = [
+	preload("res://assets/fondu/decals/gouttes_sang_1.png"),
+	preload("res://assets/fondu/decals/gouttes_sang_2.png"),
+	preload("res://assets/fondu/decals/gouttes_sang_3.png"),
+	preload("res://assets/fondu/decals/gouttes_sang_4.png"),
+	preload("res://assets/fondu/decals/gouttes_sang_5.png"),
+	preload("res://assets/fondu/decals/gouttes_sang_6.png"),
+]
 
 var _pool: Array[RigidBody2D] = []
 var _free: Array[RigidBody2D] = []
@@ -183,7 +193,8 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		# Une goutte peinte, tirée au sort, plutôt qu'un losange dessiné à la
 		# main — voir GOUTTES_SANG. `Polygon2D` sans UV explicite mappe sa
 		# texture sur la boîte englobante du polygone : un simple quad suffit.
-		var tex := GOUTTES_SANG[randi() % GOUTTES_SANG.size()]
+		var gouttes := GOUTTES_SANG_FONDUES if IsoMateriaux.effets_fondus() else GOUTTES_SANG
+		var tex := gouttes[randi() % gouttes.size()]
 		var dim := tex.get_size()
 		# Mise à l'échelle par le plus grand côté, pour rester dans le même
 		# ordre de grandeur que l'ancien losange (qui s'étendait sur 4*s).

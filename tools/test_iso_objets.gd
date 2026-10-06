@@ -231,13 +231,15 @@ func _les_capteurs(main: Node, miroirs: MiroirsIso, poses: Dictionary) -> void:
 	for slug in poses:
 		var voxel: Node3D = miroirs.miroir_de(poses[slug] as Node)
 		var mat: ShaderMaterial = voxel.call("materiau") if voxel != null else null
+		# Chantier RR, RR3 — l'encre est l'exception (`IsoMateriaux.encre_active`, `--avec-encre`).
 		if mat != null and is_equal_approx(float(mat.get_shader_parameter("encre_arete")),
-				IsoMateriaux.ENCRE_VOXEL_PX if IsoMateriaux.beaute_active() else 0.0) \
+				IsoMateriaux.ENCRE_VOXEL_PX if IsoMateriaux.beaute_active() and IsoMateriaux.encre_active() else 0.0) \
 				and is_equal_approx(float(mat.get_shader_parameter("encre_reste")), IsoMateriaux.ENCRE_VOXEL_RESTE):
 			encres += 1
 		else:
 			printerr("    %s : encre absente du matériau du miroir" % slug)
-	_check("les miroirs des objets et du leurre portent l'encre des arêtes des corps (IsoMateriaux.accorder_corps)",
+	_check("les miroirs des objets et du leurre portent l'encre des arêtes des corps — %s (IsoMateriaux.accorder_corps)" % (
+		"l'encre demandée" if IsoMateriaux.encre_active() else "aucune, comme eux : l'encre est l'exception"),
 		encres == poses.size(), "%d/%d" % [encres, poses.size()])
 	# Et la température de la lumière sur les nuages : la teinte chaude du sol et des murs (ISO7).
 	var volumes := IsoVolumes.new()

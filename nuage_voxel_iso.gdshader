@@ -151,6 +151,8 @@ uniform float temperature = 0.0;
 // chaude au-dessus. 0 et 0 : la température d'un nuage, celle des couches (la teinte chaude partout), inchangée.
 uniform float temperature_seuil_bas = 0.0;
 uniform float temperature_seuil_haut = 0.0;
+// Chantier RR, RR2 — la lumière peinte (`pate_courbe`, `iso_pate.gdshaderinc`) : sa force ; 0, la lumière telle quelle.
+uniform float courbe : hint_range(0.0, 1.0) = 0.0;
 // Le modelé des faces, en valeur affichée : le dessus porte la lumière lue, les deux côtés que la caméra voit
 // l'assombrissent (à gauche et à droite de l'écran : la même règle dans les deux vues).
 uniform float face_dessus = 1.0;
@@ -614,6 +616,8 @@ void vertex() {
 		// un cube pâle posé sur du noir laissait 1/255 là où le juge du masque tranche au pixel (deuxième preuve du noir).
 		vec3 col = (l <= 0.0 || pate_luminance(brute) <= 0.0) ? vec3(0.0)
 			: (style == PATE_BRUTE ? lu : pate(lu, l, style, c.xz, vec2(0.0), l, 0.1));
+		// Chantier RR, RR2 — la lumière peinte, avant la température, sur l'octet : rien ne bouge sous le pied.
+		col = pate_courbe(col, courbe);
 		col = pate_temperature_graduee_neutre(col, temperature, temperature_seuil_bas, temperature_seuil_haut,
 			pate_poids_neutre(brute));
 		// La face : le dessus porte la lumière ; un côté est à gauche ou à droite de l'écran selon la caméra qui dessine.

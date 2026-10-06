@@ -1,0 +1,218 @@
+{
+ "loupe-pilier": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "taille": [
+   800,
+   450
+  ],
+  "colonnes": [
+   "SANS COURBE — la brute de RR1",
+   "COURBE 0,35",
+   "COURBE 0,6 — le jeu",
+   "COURBE 1"
+  ],
+  "allumes_au_dessus_de_8": [
+   167301,
+   167322,
+   167328,
+   167342
+  ],
+  "moyenne_luma_allumee": [
+   15.3,
+   15.7,
+   15.9,
+   16.3
+  ],
+  "p99_luma_allumee": [
+   80.6,
+   90.8,
+   97.1,
+   104.5
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   1974,
+   5357,
+   7253
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   514,
+   599,
+   559
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   535,
+   626,
+   600
+  ]
+ },
+ "loupe-sol": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "taille": [
+   800,
+   450
+  ],
+  "colonnes": [
+   "SANS COURBE — la brute de RR1",
+   "COURBE 0,35",
+   "COURBE 0,6 — le jeu",
+   "COURBE 1"
+  ],
+  "allumes_au_dessus_de_8": [
+   166184,
+   166150,
+   166074,
+   166073
+  ],
+  "moyenne_luma_allumee": [
+   15.1,
+   15.4,
+   15.6,
+   15.9
+  ],
+  "p99_luma_allumee": [
+   79.0,
+   87.8,
+   93.8,
+   101.6
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   1954,
+   4476,
+   6274
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   108,
+   623,
+   629
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   74,
+   513,
+   518
+  ]
+ },
+ "loupe-corps-j1": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "taille": [
+   800,
+   450
+  ],
+  "colonnes": [
+   "SANS COURBE — la brute de RR1",
+   "COURBE 0,35",
+   "COURBE 0,6 — le jeu",
+   "COURBE 1"
+  ],
+  "allumes_au_dessus_de_8": [
+   157348,
+   157422,
+   157369,
+   157442
+  ],
+  "moyenne_luma_allumee": [
+   15.1,
+   15.4,
+   15.6,
+   16.0
+  ],
+  "p99_luma_allumee": [
+   80.9,
+   90.8,
+   97.4,
+   103.6
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   1985,
+   4133,
+   5896
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   459,
+   471,
+   476
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   533,
+   492,
+   570
+  ]
+ },
+ "loupe-corps-j2": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "taille": [
+   800,
+   450
+  ],
+  "colonnes": [
+   "SANS COURBE — la brute de RR1",
+   "COURBE 0,35",
+   "COURBE 0,6 — le jeu",
+   "COURBE 1"
+  ],
+  "allumes_au_dessus_de_8": [
+   164397,
+   164477,
+   164408,
+   164497
+  ],
+  "moyenne_luma_allumee": [
+   15.0,
+   15.3,
+   15.5,
+   15.9
+  ],
+  "p99_luma_allumee": [
+   79.2,
+   88.3,
+   94.6,
+   101.6
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   2006,
+   4301,
+   6122
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   495,
+   515,
+   511
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   575,
+   526,
+   611
+  ]
+ }
+}

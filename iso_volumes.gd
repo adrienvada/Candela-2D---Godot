@@ -585,7 +585,7 @@ func _suivre_comete(f: Node2D, lumiere: Light2D, energie: float, vus: Dictionary
 			_retirer_dessin(e, s)
 	if not lueurs_actives:
 		return
-	_halos(e, 2)
+	_halos(e, 3)
 	var h := float(f.call("hauteur_source")) * TUILE if f.has_method("hauteur_source") else 0.0
 	var coeur := f.get_node_or_null(^"Coeur") as CanvasItem
 	var couleur := lumiere.color if lumiere != null else Color.WHITE
@@ -593,6 +593,7 @@ func _suivre_comete(f: Node2D, lumiere: Light2D, energie: float, vus: Dictionary
 	var p := Vector3(f.global_position.x, maxf(h, PLANCHER_PX), f.global_position.y)
 	_poser_halo(e, 0, p, 10.0, couleur, eclat, 1)
 	_poser_halo(e, 1, p, 46.0, couleur, 0.4 * eclat, 0)
+	_poser_rayonnement(e, 2, p, 46.0, couleur, 0.4 * eclat)
 
 
 # ---------------------------------------------------------------------------
@@ -847,6 +848,21 @@ func _tailler_faisceau_air(e: Dictionary, tex: Texture2D, rayon: float, angle: f
 		juge.rotation = tourne
 
 
+## Chantier RR, RR4 — LA POUSSIÈRE DANS LE FAISCEAU (venue de RR3 : « la poussière dans les faisceaux, dans la lumière
+## seulement »). Des grains qui dérivent lentement dans le rayon de la torche (`poussiere_du_faisceau`, `volume_iso.gdshader`) :
+## un facteur sur l'opacité du rayon, de MOYENNE 1 — le faisceau ne s'éclaircit pas, il se grène —, nul hors du rayon (le
+## rayon n'existe que là). Visuel seulement : le rayon dans l'air n'est lu par rien (ni éblouissement, ni capteur, ni bot).
+## `--sans-poussiere` l'éteint ; éteinte sans beauté.
+const POUSSIERE := 0.7
+const DRAPEAU_SANS_POUSSIERE := "--sans-poussiere"
+
+
+static func poussiere_du_faisceau() -> float:
+	if not IsoMateriaux.beaute_active() or DrapeauxDeLancement.present(DRAPEAU_SANS_POUSSIERE):
+		return 0.0
+	return POUSSIERE
+
+
 ## Q75, D — la longueur de chaque couche (`longueur_air`, pixels de monde : `plafond` × son rayon, le dôme de la 0.7.1) et son
 ## fondu, posés à chaque image (un banc bascule `faisceau_air_court` sur place) ; et le juge ne juge plus qu'où une couche peut
 ## dessiner : `juge_rayons` (que `_poser_juge` vient de poser à leur rayon) à la même part. Sans coupure : la longueur
@@ -860,6 +876,8 @@ func _poser_longueur(e: Dictionary, juge: MeshInstance3D, plafond: float) -> voi
 		var r := float(mat.get_shader_parameter("nuage_rayon"))
 		mat.set_shader_parameter("longueur_air", r * plafond if court else LONGUEUR_AIR_SANS_COUPURE)
 		mat.set_shader_parameter("fondu_air", FONDU_AIR)
+		# Chantier RR, RR4 — la poussière dans le rayon (`poussiere_du_faisceau`, `volume_iso.gdshader`).
+		mat.set_shader_parameter("poussiere_faisceau", poussiere_du_faisceau())
 		if i < 4:
 			rayons[i] = r * plafond
 	if court and juge != null:
@@ -1105,10 +1123,11 @@ func _suivre_eclair(g: Node2D, vus: Dictionary) -> void:
 	var feu := g.get_node_or_null(^"Embrasement") as Light2D
 	var part := clampf(feu.energy / 6.0, 0.0, 1.0) if feu != null and feu.enabled else 0.0
 	var e := _entree(g, "eclair", vus, 1)
-	_halos(e, 2)
+	_halos(e, 3)
 	var p := Vector3(g.global_position.x, HAUTEUR_ECLAIR_MINE * TUILE, g.global_position.y)
 	_poser_halo(e, 0, p, 70.0, Charte.HALOGENE, 0.55 * part, 0)
 	_poser_halo(e, 1, p, 12.0, Charte.HALOGENE, part, 1)
+	_poser_rayonnement(e, 2, p, 70.0, Charte.HALOGENE, 0.55 * part)
 
 
 ## S5 — LE LUMINAIRE DU PLAFONNIER : un point franc et un halo doux, posés à la HAUTEUR de la lampe 2D (le plafond, 52,5 px). Une
@@ -1133,10 +1152,11 @@ func _suivre_plafonniers(main: Node, vus: Dictionary) -> void:
 			continue
 		var part := clampf(halo.energy / ENERGIE_REFERENCE_LUMINAIRE, 0.0, 1.5)
 		var e := _entree(p as Object, "plafonnier", vus, 1)
-		_halos(e, 2)
+		_halos(e, 3)
 		var place := Vector3(halo.global_position.x, maxf(halo.height, PLANCHER_PX), halo.global_position.y)
 		_poser_halo(e, 0, place, TAILLE_HALO_LUMINAIRE, halo.color, INTENSITE_HALO_LUMINAIRE * part, 0)
 		_poser_halo(e, 1, place, TAILLE_LUMINAIRE, halo.color, part, 1)
+		_poser_rayonnement(e, 2, place, TAILLE_HALO_LUMINAIRE, halo.color, INTENSITE_HALO_LUMINAIRE * part)
 
 
 ## L'éclat de bouche au bout de l'arme du corps voxel : le dessin 2D sort des lightmaps (il y était couché
@@ -1152,7 +1172,7 @@ func _suivre_eclats(main: Node, presentation: Node, vus: Dictionary) -> void:
 		if eclat == null:
 			continue
 		var e := _entree(eclat, "eclat", vus, 1)
-		_halos(e, 2)
+		_halos(e, 3)
 		_retirer_dessin(e, eclat)
 		var flash := (joueur as Node).get_node_or_null(^"MuzzleFlash") as Light2D
 		var part := Presentation3D.opacite_rendue(eclat)
@@ -1163,6 +1183,7 @@ func _suivre_eclats(main: Node, presentation: Node, vus: Dictionary) -> void:
 			bout = Vector3(bouche.global_position.x, MursBas.HAUTEUR_DEBOUT * 0.6 * TUILE, bouche.global_position.y)
 		_poser_halo(e, 0, bout, 30.0, eclat.modulate, 0.8 * part, 0)
 		_poser_halo(e, 1, bout, 8.0, eclat.modulate, part, 1)
+		_poser_rayonnement(e, 2, bout, 30.0, eclat.modulate, 0.8 * part)
 
 
 ## Chantier des lumières de la 0.8.0, L3 — LE POINT LUMINEUX À LA LENTILLE (Q46, Adrien, 2026-09-29 : « le point lumineux
@@ -1199,12 +1220,13 @@ func _suivre_lentilles_des_joueurs(main: Node, presentation: Node, vus: Dictiona
 		if part <= 0.0 or pointe.is_empty():
 			continue
 		var e := _entree(joueur as Object, "lentille_joueur", vus, CLE_LENTILLE_JOUEUR)
-		_halos(e, 2)
+		_halos(e, 3)
 		var direction: Vector3 = pointe["direction"]
 		# Posé juste devant le verre : le fût de la torche, derrière, ne le coupe pas.
 		var p: Vector3 = (pointe["position"] as Vector3) + direction * AVANT_DU_VERRE_PX
 		_poser_halo(e, 0, p, TAILLE_HALO_LENTILLE, lampe.color, INTENSITE_HALO_LENTILLE * part, 0)
 		_poser_halo(e, 1, p, TAILLE_POINT_LENTILLE, lampe.color, part, 1)
+		_poser_rayonnement(e, 2, p, TAILLE_HALO_LENTILLE, lampe.color, INTENSITE_HALO_LENTILLE * part)
 		for mat: ShaderMaterial in e["mats"]:
 			mat.set_shader_parameter("lentille_orientee", true)
 			mat.set_shader_parameter("direction_lentille", direction)
@@ -2049,6 +2071,29 @@ func _poser_halo(e: Dictionary, i: int, position_px: Vector3, taille_px: float, 
 	mat.set_shader_parameter("couleur", couleur)
 	mat.set_shader_parameter("intensite", intensite)
 	mat.set_shader_parameter("forme", forme)
+
+
+## Chantier RR, RR4 — LE RAYONNEMENT DES SOURCES VIVES (Adrien, 2026-10-05 : « plus réaliste », Hadès pour référence, dont les
+## sources rayonnent au-delà de leur forme). Une troisième lueur autour des cinq sources qui ont déjà un point et un halo — la
+## comète de la fusée, l'éclair de la mine, le luminaire du plafonnier, l'éclat de bouche, la lentille d'une torche tenue — :
+## `RAYONNEMENT_TAILLE` fois le diamètre du halo doux, à `RAYONNEMENT_INTENSITE` fois son intensité, la même décroissance douce
+## (`forme` 0). Une IMAGE, comme les deux autres : elle ne verse aucune lumière (ni lightmap, ni corps, ni capteur, ni bot), et
+## son intensité est celle de SA source — source éteinte, rayonnement éteint. La lentille d'une torche le pèse par l'orientation
+## du verre, comme ses deux autres lueurs (`lentille_orientee`, posé sur tous les matériaux de l'entrée). `--sans-rayonnement`
+## l'éteint (comparer) ; éteint sans beauté, comme toutes les lueurs.
+const RAYONNEMENT_TAILLE := 3.0
+const RAYONNEMENT_INTENSITE := 0.5
+const DRAPEAU_SANS_RAYONNEMENT := "--sans-rayonnement"
+
+
+static func rayonnement_actif() -> bool:
+	return IsoMateriaux.beaute_active() and not DrapeauxDeLancement.present(DRAPEAU_SANS_RAYONNEMENT)
+
+
+func _poser_rayonnement(e: Dictionary, i: int, position_px: Vector3, taille_halo: float, couleur: Color,
+		intensite_halo: float) -> void:
+	_poser_halo(e, i, position_px, taille_halo * RAYONNEMENT_TAILLE, couleur,
+		intensite_halo * RAYONNEMENT_INTENSITE if rayonnement_actif() else 0.0, 0)
 
 
 ## Sort un dessin 2D des lightmaps, par le registre de `MiroirsIso` (une seule main sur `visibility_layer`).

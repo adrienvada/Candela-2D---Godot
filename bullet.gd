@@ -85,7 +85,8 @@ func _ready():
 	#
 	# DA2.12 — le halo peint de la traînée, désormais porté par l'aura seule. Texture partagée et mise en
 	# cache par `LightTextures.masque()`.
-	var grad_tex := LightTextures.masque(LightTextures.TRAINEE)
+	# Chantier RR, RR5 — la traînée et la traçante FONDUES en jeu (`IsoMateriaux.masque_d_effet`) ; encrées sous `--sans-fondu`.
+	var grad_tex := LightTextures.masque(IsoMateriaux.masque_d_effet(LightTextures.TRAINEE))
 
 	var core = Line2D.new()
 	core.name = "Core"
@@ -101,7 +102,7 @@ func _ready():
 	# été cuite retournée (`--miroir oui`) pour que le dense soit sur le
 	# projectile et l'extinction derrière : une traînée s'éteint dans son sillage,
 	# elle ne s'y allume pas.
-	var trace := LightTextures.masque("res://assets/decals/tracante.png")
+	var trace := LightTextures.masque(IsoMateriaux.masque_d_effet("res://assets/decals/tracante.png"))
 	if trace != null:
 		core.texture = trace
 		core.texture_mode = Line2D.LINE_TEXTURE_STRETCH
