@@ -162,7 +162,10 @@ func _run() -> void:
 		quit(1)
 		return
 
-	var planches: Array = sang.ECLABOUSSURES
+	# Chantier RR, RR5 — le jeu de planches du MOMENT (`planches()`) et ses mesures : les masques fondus en jeu, les encrés sous
+	# `--sans-fondu` (la suite `test_sang_au_sol_sans_fondu`). Lire `ECLABOUSSURES` ici mesurerait les encrés pendant que le jeu
+	# pose les fondus : les taches vivantes ne retrouveraient plus leur mesure, et leurs contrôles se tairaient au lieu de rougir.
+	var planches: Array = sang.planches()
 	var mesures := {}
 
 	print("\n[Chaque planche a bien une flaque franche à trouver]")
@@ -280,7 +283,7 @@ func _run() -> void:
 	# de lui.
 	var diametre_corps: float = sang.DIAMETRE_CORPS
 	var echelle_max: float = sang.ECHELLE_MAX
-	var poids_table: Array = sang.POIDS_TAILLE
+	var poids_table: Array = sang.poids_taille()
 	_check("un poids de taille par planche", poids_table.size() == planches.size(),
 		"%d poids pour %d planches" % [poids_table.size(), planches.size()])
 	for i in range(mini(poids_table.size(), planches.size())):
@@ -430,7 +433,7 @@ func _run() -> void:
 	# Le contrôle qui rend la table `FLAQUES` maintenable : elle est comparée aux
 	# planches RÉELLES, mesurées ci-dessus. Recuire un décal en changeant sa
 	# composition fait rougir ici, au lieu de décaler les taches en silence.
-	var table: Array = sang.FLAQUES
+	var table: Array = sang.flaques()
 	_check("un centre de flaque par planche", table.size() == planches.size(),
 		"%d pour %d planches" % [table.size(), planches.size()])
 	for i in range(mini(table.size(), planches.size())):

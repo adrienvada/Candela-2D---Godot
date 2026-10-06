@@ -628,6 +628,10 @@ run test_rendu_rr_sans_courbe --script "res://tools/test_rendu_rr.gd" -- --sans-
 run test_rendu_rr_sans_lueur --script "res://tools/test_rendu_rr.gd" -- --sans-lueur-led
 # RR4 — les lueurs éteintes, lues au lancement : ni rayonnement autour des sources vives, ni poussière dans le faisceau.
 run test_rendu_rr_sans_lueurs --script "res://tools/test_rendu_rr.gd" -- --sans-rayonnement --sans-poussiere
+# RR5 — les effets en paliers, lus au lancement : le sang, les gouttes, les éclats, la traçante et le flash de mort de la
+# refonte. Le banc du sang mesure alors les planches ENCRÉES contre leurs tables (sans drapeau, il mesure les fondues).
+run test_rendu_rr_sans_fondu --script "res://tools/test_rendu_rr.gd" -- --sans-fondu
+run test_sang_au_sol_sans_fondu --script "res://tools/test_sang_au_sol.gd" -- --sans-fondu
 run test_iso_beaute_avec_encre --script "res://tools/test_iso_beaute.gd" -- --avec-encre
 run test_iso_objets_avec_encre --script "res://tools/test_iso_objets.gd" -- --avec-encre
 run test_fumee_voxel_avec_encre --script "res://tools/test_fumee_voxel.gd" -- --avec-encre

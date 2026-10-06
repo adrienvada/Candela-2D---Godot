@@ -27,11 +27,16 @@
 ## `IsoMateriaux.lueur_led`, `Presentation3D._accorder_la_lueur_led`) : posée par le matériau du jeu, nulle sous l'encre ou
 ## `--sans-lueur-led`, la même fonction dans le mur et le mur éclairé, la couleur de la bande relue à chaque image.
 ##
-## Jouée six fois par `run_suites.sh` : sans drapeau (`test_rendu_rr`), `test_rendu_rr_avec_encre` (`--avec-encre`),
+## Étape RR5 — **les effets en jeu, du palier au fondu** (`IsoMateriaux.effets_fondus`, `masque_d_effet` ; `--sans-fondu`) : le
+## sang au sol, les gouttes, les éclats des murs, la traçante et sa traînée chargent leurs masques d'avant l'encrage
+## (`assets/fondu/`, rendus par l'histoire), chacun avec son jumeau encré toujours en place ; le flash de mort suit son intensité
+## au lieu de ses trois paliers. Les masques de LUMIÈRE — halo, rétrodiffusion, éclat, flash de tir — ne changent pas (Q92).
+##
+## Jouée sept fois par `run_suites.sh` : sans drapeau (`test_rendu_rr`), `test_rendu_rr_avec_encre` (`--avec-encre`),
 ## `test_rendu_rr_sans_encre` (`--sans-encre --encre-essai` : le retrait doit l'emporter), `test_rendu_rr_sans_courbe`
 ## (`--sans-courbe`), `test_rendu_rr_sans_lueur` (`--sans-lueur-led`), `test_rendu_rr_sans_lueurs` (`--sans-rayonnement
-## --sans-poussiere`).
-## Lancer : godot --headless --path . --script res://tools/test_rendu_rr.gd [-- --avec-encre | --sans-encre | --sans-courbe | --sans-lueur-led]
+## --sans-poussiere`), `test_rendu_rr_sans_fondu` (`--sans-fondu`).
+## Lancer : godot --headless --path . --script res://tools/test_rendu_rr.gd [-- --avec-encre | --sans-encre | --sans-courbe | --sans-lueur-led | --sans-fondu]
 extends SceneTree
 
 const IsoPate := preload("res://iso_pate.gd")
@@ -75,6 +80,7 @@ func _run() -> void:
 	_la_lueur_des_led_posee()
 	_le_rayonnement()
 	_la_poussiere()
+	_les_effets_fondus()
 	print("%d vérifications, %d échec(s)" % [_verifications, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -568,3 +574,136 @@ func _vec2_du_shader(sh: String, nom: String) -> Vector2:
 		return Vector2(NAN, NAN)
 	var parts := sh.substr(i + cle.length(), sh.find(")", i) - i - cle.length()).split(",")
 	return Vector2(parts[0].to_float(), parts[1].to_float())
+
+
+# ---------------------------------------------------------------------------
+# RR5 — LES EFFETS EN JEU, DU PALIER AU FONDU
+# ---------------------------------------------------------------------------
+
+## Les masques FONDUS que le jeu charge, relatifs à `assets/` : `assets/fondu/<rel>`, et leur jumeau encré `assets/<rel>`.
+func _masques_fondus() -> PackedStringArray:
+	var l := PackedStringArray()
+	for n in range(1, 10):
+		l.append("decals/sang_%d.png" % n)
+		l.append("decals/sang_%d_coeur.png" % n)
+	for n in range(1, 7):
+		l.append("decals/gouttes_sang_%d.png" % n)
+	for n: int in _constante("res://wall_impact.gd", "ECLATS_FONDUS"):
+		l.append("decals/impact_%d.png" % n)
+	l.append("decals/tracante.png")
+	l.append("halo/trainee.png")
+	return l
+
+
+## Le nombre de niveaux d'alpha d'un PNG, lu sur le DISQUE (pas dans le cache d'import, comme `test_encrage`) ; -1 s'il ne se
+## lit pas.
+func _niveaux_alpha(chemin: String) -> int:
+	var img := Image.load_from_file(ProjectSettings.globalize_path(chemin))
+	if img == null or img.is_empty():
+		return -1
+	img.convert(Image.FORMAT_RGBA8)
+	var vus := {}
+	var octets := img.get_data()
+	for k in range(3, octets.size(), 4):
+		vus[octets[k]] = true
+	return vus.size()
+
+
+func _les_effets_fondus() -> void:
+	print("— RR5 : les effets en jeu, du palier au fondu")
+	var sans := DrapeauxDeLancement.present(IsoMateriaux.DRAPEAU_SANS_FONDU)
+	var fondus := IsoMateriaux.effets_fondus()
+	_check("%s : les effets %s" % ["--sans-fondu" if sans else ("l'encre" if IsoMateriaux.encre_active() else "le jeu"),
+		"fondus" if fondus else "en paliers"], fondus == (not sans and not IsoMateriaux.encre_active()))
+	# Les fichiers : chaque masque fondu est sur le disque, importé, FONDU (des dizaines de niveaux d'alpha, là où l'encre en a
+	# deux à quatre), et son jumeau encré est là, en paliers — `--sans-fondu` trouve toujours les siens.
+	var manquants := PackedStringArray()
+	var durs := PackedStringArray()
+	var orphelins := PackedStringArray()
+	var masques := _masques_fondus()
+	for rel: String in masques:
+		var fondu := IsoMateriaux.DOSSIER_FONDU + rel
+		var encre := "res://assets/" + rel
+		if not FileAccess.file_exists(fondu) or not ResourceLoader.exists(fondu) or load(fondu) == null:
+			manquants.append(rel)
+			continue
+		var n := _niveaux_alpha(fondu)
+		if n < 32:
+			durs.append("%s (%d niveaux)" % [rel, n])
+		var ne := _niveaux_alpha(encre)
+		if not ResourceLoader.exists(encre) or ne < 1 or ne > 4:
+			orphelins.append("%s (%d niveaux)" % [rel, ne])
+	_check("les %d masques fondus sont là, importés" % masques.size(), manquants.is_empty(), ", ".join(manquants))
+	_check("ils sont FONDUS (32 niveaux d'alpha au moins)", durs.is_empty(), ", ".join(durs))
+	_check("chacun a son jumeau encré, en paliers (deux à quatre niveaux)", orphelins.is_empty(), ", ".join(orphelins))
+	# Le chemin : le jumeau fondu en jeu, l'encré sinon ; un masque sans jumeau (l'éclat 5, dessiné à l'encre seulement) reste
+	# le sien.
+	var attendu := IsoMateriaux.DOSSIER_FONDU + "decals/sang_1.png" if fondus else "res://assets/decals/sang_1.png"
+	_check("le masque d'un effet : %s" % attendu, IsoMateriaux.masque_d_effet("res://assets/decals/sang_1.png") == attendu)
+	_check("un masque sans jumeau fondu reste le sien",
+		IsoMateriaux.masque_d_effet("res://assets/decals/impact_5.png") == "res://assets/decals/impact_5.png"
+		and IsoMateriaux.masque_d_effet("res://blood_stain.gd") == "res://blood_stain.gd")
+	# Les LUMIÈRES ne changent pas (Q92) : aucun masque de lumière n'a de jumeau fondu.
+	var lumieres := PackedStringArray()
+	var chemins_lumiere: Array = [LightTextures.AMBIANTE, LightTextures.RETRODIFFUSION, LightTextures.ECLAT]
+	chemins_lumiere.append_array(LightTextures.FLASH)
+	for chemin: String in chemins_lumiere:
+		if FileAccess.file_exists(IsoMateriaux.DOSSIER_FONDU + chemin.trim_prefix("res://assets/")):
+			lumieres.append(chemin.get_file())
+	_check("aucun masque de lumière n'a de jumeau fondu (halo, rétrodiffusion, éclat, flash de tir : Q92)",
+		lumieres.is_empty() and chemins_lumiere.size() >= 4, ", ".join(lumieres))
+	# Le sang au sol : la planche ET ses mesures, du même jeu (`test_sang_au_sol` mesure celui-là, sur le disque).
+	var sang: GDScript = load("res://blood_stain.gd")
+	var consts := sang.get_script_constant_map()
+	var planches: Array = sang.planches()
+	var du_jeu := true
+	for p: String in planches:
+		du_jeu = du_jeu and p.begins_with(IsoMateriaux.DOSSIER_FONDU) == fondus
+	_check("le sang : %d planches %s, avec leurs mesures" % [planches.size(), "fondues" if fondus else "encrées"],
+		du_jeu and planches.size() == (consts["ECLABOUSSURES"] as Array).size()
+		and (consts["FLAQUES_FONDUES"] as Array).size() == planches.size()
+		and (consts["POIDS_TAILLE_FONDUS"] as Array).size() == planches.size()
+		and sang.flaques() == (consts["FLAQUES_FONDUES"] if fondus else consts["FLAQUES"])
+		and sang.poids_taille() == (consts["POIDS_TAILLE_FONDUS"] if fondus else consts["POIDS_TAILLE"]))
+	var source_sang := FileAccess.get_file_as_string("res://blood_stain.gd")
+	_check("la tache posée lit la planche et les mesures du jeu (jamais les tables encrées en direct)",
+		source_sang.contains("var chemin: String = IsoMateriaux.masque_d_effet(ECLABOUSSURES[i])")
+		and source_sang.contains("_ancre = flaques()[i]") and source_sang.contains("* poids_taille()[i]")
+		and not source_sang.contains("FLAQUES[i]") and not source_sang.contains("POIDS_TAILLE[i]"))
+	# Les gouttes.
+	var gouttes: Array = _constante("res://particle_pool.gd", "GOUTTES_SANG_FONDUES")
+	var gouttes_ok := gouttes.size() == 6
+	for t: Texture2D in gouttes:
+		gouttes_ok = gouttes_ok and t != null and t.resource_path.begins_with(IsoMateriaux.DOSSIER_FONDU)
+	_check("les gouttes : six fondues, tirées au sort parmi celles du jeu", gouttes_ok
+		and FileAccess.get_file_as_string("res://particle_pool.gd").contains(
+			"var gouttes := GOUTTES_SANG_FONDUES if IsoMateriaux.effets_fondus() else GOUTTES_SANG"))
+	# Les éclats des murs, posés pour de vrai.
+	var impact: GDScript = load("res://wall_impact.gd")
+	var vus := {}
+	var hors_jeu := PackedStringArray()
+	for k in 80:
+		var w: Node2D = impact.new()
+		if w.call("setup", Vector2.ZERO):
+			var tex := w.get("_texture") as Texture2D
+			var p := tex.resource_path if tex != null else "?"
+			vus[p] = true
+			if p.begins_with(IsoMateriaux.DOSSIER_FONDU) != fondus:
+				hors_jeu.append(p.get_file())
+		w.free()
+	_check("les éclats posés : %d planches vues, toutes %s" % [vus.size(), "fondues" if fondus else "encrées"],
+		hors_jeu.is_empty() and vus.size() >= 8, ", ".join(hors_jeu))
+	# La traçante et sa traînée.
+	var source_balle := FileAccess.get_file_as_string("res://bullet.gd")
+	_check("la traçante et sa traînée passent par le masque d'effet",
+		source_balle.contains("LightTextures.masque(IsoMateriaux.masque_d_effet(LightTextures.TRAINEE))")
+		and source_balle.contains("LightTextures.masque(IsoMateriaux.masque_d_effet(\"res://assets/decals/tracante.png\"))"))
+	# Le flash de mort : fondu, la case blanche suit l'intensité ; sinon, ses trois paliers. Toujours sans lire l'écran.
+	var sh := FileAccess.get_file_as_string("res://death_flash.gdshader")
+	_check("le flash de mort : fondu, il suit l'intensité ; sinon ses trois paliers ; aucune texture lue",
+		sh.contains("uniform bool fondu = false;")
+		and sh.contains("\tif (fondu) {\n\t\ta = flash_intensity;\n\t} else if (flash_intensity >= 0.66) {")
+		and not sh.contains("sampler2D"))
+	_check("la mort pose le fondu sur son flash", FileAccess.get_file_as_string("res://player.gd").contains(
+		"\tmat.shader = SHADER_DEATH_FLASH\n\t# Chantier RR, RR5 — le flash fondu en jeu, ses trois paliers sous `--sans-fondu` "
+		+ "(`death_flash.gdshader`).\n\tmat.set_shader_parameter(\"fondu\", IsoMateriaux.effets_fondus())\n"))

@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-06 (RR4 — les lueurs : les cinq sources vives rayonnent — une troisième lueur, large et faible, une image que rien de ce que lit le jeu ne voit (capteurs et lightmap identiques à l'octet) —, et la poussière grène le faisceau sans l'éclaircir (un facteur de moyenne 1) ; le noir absolu tient, les pixels sortis du noir sont au pied d'une source vive ; cadence 1,025, le coût n'est pas mesurable ; RR3 — l'encre devient l'exception (`--avec-encre`), et la lueur des LED au pied des murs dit où ils sont (Q90 = (b)) : loin de toute lumière vive, 38 278 pixels allumés au plan « torche » contre 29 528 avec le trait ; un facteur sur la part de la bande, jamais un terme ; cadence 0,992 ; Q91 posée, la vignette ; la poussière dans les faisceaux passe à RR4 ; RR2 — la lumière peinte : une courbe de tons sur le sol, les murs et la fumée — le cœur des flaques et des cônes relevé, rien sous son pied, cadence 0,989 au duel ; trouvé en chemin, la « valeur affichée » d'`iso_pate` est la lumière linéaire (le relevé d'ISO7 était le point noir de la sortie 3D) — signalé ; Q90 tranchée, (b), et le chantier RR lancé jusqu'à RR5 ; RR1 — Q83 tranchée, « brute, sans paliers » : la pâte brute devient le défaut en jeu, les menus ne changent pas ; l'essai sans encre (`--sans-encre`) ; le chantier RR inscrit — un rendu en jeu plus réaliste, plus fluide, plus oppressant, Hadès pour référence ; OMBRES : Q89 préparée — le geste rangé en patch, la planche faite : pendant une redescente, le jeu tourne le voile et l'appareil vers l'adversaire, avec le geste vers ce qui a ébloui ; trouvé en chemin, l'appareil du brouillage ne s'allume jamais en aventure ; OM3c — les preuves de Q83 et Q85, posées par les bancs sans toucher au jeu : la pâte (b) retire 90 % du balayage des paliers en gardant le lavis, (c) le retire entier en perdant le palier du milieu ; l'atlas à 4096 retire 98 % du papillotement d'une ombre qui tourne pour un coût indiscernable du bruit, le PCF5 coûte 10 à 14 % ; trouvé en chemin, l'allumage « CANDELA » qui voilait le premier plan des planches sous llvmpipe ; OM6 close — les capteurs d'objets, mesurés au passage, coûtent moins de 0,5 % chacun ; OM6b mesuré avant, pas fait — les murs par contours ne retireraient que 5 % des arêtes d'occulteurs de la salle 8.9, au plus 2 % du temps d'image, pour le geste le plus risqué du lot ; OM6a LIVRÉ — le banc de cadence du solo, et trois gestes mesurés dans la salle 8.9 : +9 % de cadence sous llvmpipe (l'ombre d'un halo sans récepteur, le capteur d'un corps caché, la lumière de coup partie à 1 % de son énergie) ; OM2 LIVRÉ — l'ombre d'un corps a la forme de son corps voxel, l'arme ne pointe plus au sol, et les PNJ ont leur ombre de contact ; OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; l'audit d'optimisation, en lecture seule : rapport `docs/AUDIT_OPTIMISATION.md`, section « Chantier — l'audit d'optimisation », six pièges ajoutés ; la veille, SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-06 (RR5 — les effets en jeu, du palier au fondu : le sang, les gouttes, les éclats, la traçante et le flash de mort retrouvent leurs masques d'avant l'encrage, rendus par l'histoire — en jeu seulement, `--sans-fondu` rend les paliers ; la règle d'Adrien sur le sang, mesurée sur les masques fondus ; les masques de LUMIÈRE ne bougent pas (une règle de jeu : Q92) ; le chantier RR est fini, sa PR attend Adrien (H17) ; RR4 — les lueurs : les cinq sources vives rayonnent — une troisième lueur, large et faible, une image que rien de ce que lit le jeu ne voit (capteurs et lightmap identiques à l'octet) —, et la poussière grène le faisceau sans l'éclaircir (un facteur de moyenne 1) ; le noir absolu tient, les pixels sortis du noir sont au pied d'une source vive ; cadence 1,025, le coût n'est pas mesurable ; RR3 — l'encre devient l'exception (`--avec-encre`), et la lueur des LED au pied des murs dit où ils sont (Q90 = (b)) : loin de toute lumière vive, 38 278 pixels allumés au plan « torche » contre 29 528 avec le trait ; un facteur sur la part de la bande, jamais un terme ; cadence 0,992 ; Q91 posée, la vignette ; la poussière dans les faisceaux passe à RR4 ; RR2 — la lumière peinte : une courbe de tons sur le sol, les murs et la fumée — le cœur des flaques et des cônes relevé, rien sous son pied, cadence 0,989 au duel ; trouvé en chemin, la « valeur affichée » d'`iso_pate` est la lumière linéaire (le relevé d'ISO7 était le point noir de la sortie 3D) — signalé ; Q90 tranchée, (b), et le chantier RR lancé jusqu'à RR5 ; RR1 — Q83 tranchée, « brute, sans paliers » : la pâte brute devient le défaut en jeu, les menus ne changent pas ; l'essai sans encre (`--sans-encre`) ; le chantier RR inscrit — un rendu en jeu plus réaliste, plus fluide, plus oppressant, Hadès pour référence ; OMBRES : Q89 préparée — le geste rangé en patch, la planche faite : pendant une redescente, le jeu tourne le voile et l'appareil vers l'adversaire, avec le geste vers ce qui a ébloui ; trouvé en chemin, l'appareil du brouillage ne s'allume jamais en aventure ; OM3c — les preuves de Q83 et Q85, posées par les bancs sans toucher au jeu : la pâte (b) retire 90 % du balayage des paliers en gardant le lavis, (c) le retire entier en perdant le palier du milieu ; l'atlas à 4096 retire 98 % du papillotement d'une ombre qui tourne pour un coût indiscernable du bruit, le PCF5 coûte 10 à 14 % ; trouvé en chemin, l'allumage « CANDELA » qui voilait le premier plan des planches sous llvmpipe ; OM6 close — les capteurs d'objets, mesurés au passage, coûtent moins de 0,5 % chacun ; OM6b mesuré avant, pas fait — les murs par contours ne retireraient que 5 % des arêtes d'occulteurs de la salle 8.9, au plus 2 % du temps d'image, pour le geste le plus risqué du lot ; OM6a LIVRÉ — le banc de cadence du solo, et trois gestes mesurés dans la salle 8.9 : +9 % de cadence sous llvmpipe (l'ombre d'un halo sans récepteur, le capteur d'un corps caché, la lumière de coup partie à 1 % de son énergie) ; OM2 LIVRÉ — l'ombre d'un corps a la forme de son corps voxel, l'arme ne pointe plus au sol, et les PNJ ont leur ombre de contact ; OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; l'audit d'optimisation, en lecture seule : rapport `docs/AUDIT_OPTIMISATION.md`, section « Chantier — l'audit d'optimisation », six pièges ajoutés ; la veille, SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -35804,7 +35804,7 @@ sans encre dira si on le garde.
 | **RR2** | La lumière peinte : une courbe de tons continue — le cœur qui blanchit, la pénombre qui vire à l'ambre —, la couleur ; multiplicative | ✅ **FAITE le 2026-10-05** — voir plus bas |
 | **RR3** | L'oppression : l'encre en exception et la lueur des LED au pied des murs (Q90 = (b)) ; les bords qui s'enfoncent (→ Q91) ; le contraste (fait par RR2) ; la portée de la torche (une règle de jeu : non) | ✅ **FAITE le 2026-10-06** — voir plus bas |
 | **RR4** | Les lueurs : les sources qui rayonnent (flash, fusée, braises, LED), et la poussière dans les faisceaux (venue de RR3 : la lumière dans l'air), au banc de cadence, noir absolu vérifié | ✅ **FAITE le 2026-10-06** — voir plus bas (les braises et les LED : non, et pourquoi) |
-| **RR5** | Les effets en jeu — sang, impacts, flash de mort, traçante — du palier au fondu (rouvre, en jeu seulement, la règle d'encrage de la refonte) | proposée |
+| **RR5** | Les effets en jeu — sang, impacts, flash de mort, traçante — du palier au fondu (rouvre, en jeu seulement, la règle d'encrage de la refonte) | ✅ **FAITE le 2026-10-06** — voir plus bas (les masques de lumière : non, → Q92) |
 
 « Plus fluide » tient aussi à Q85 (OMBRES) : l'atlas d'ombres à 4096 retire 98 % du papillotement d'une ombre qui tourne.
 
@@ -36116,6 +36116,95 @@ même sans force ; P6 `--sans-poussiere` ignoré.
 de quads, pour un effet que leur lueur au sol porte déjà) ; la lentille de la torche fantôme et le cœur de la lampe, des points
 seuls sans halo doux de départ ; les LED, dont la lueur au pied des murs (RR3) est déjà le rayonnement.
 
+### RR5 — FAITE le 2026-10-06 : les effets en jeu, du palier au fondu
+
+**Une règle rouverte, en jeu seulement.** La refonte roman graphique avait encré les masques des effets (lot 1, 2026-09-10 :
+« les masques passent à l'encre ») et mis le flash de mort en trois paliers (lot 3) ; l'ordre 54 (2026-09-15) refusait d'y
+revenir — « le sang garde ses paliers », la décision du 10/09 gardée par `test_encrage`. Adrien l'a rouverte : Q83 (« brute,
+sans paliers »), « plus réaliste, plus fluide », puis RR lancé jusqu'à RR5 le 2026-10-05. Ces effets n'existent qu'en partie —
+aucun menu ne charge leurs masques —, donc la règle tombe en jeu et nulle part ailleurs (`IsoMateriaux.effets_fondus`,
+`masque_d_effet`) :
+- **Le sang au sol** : les neuf planches d'avant l'encrage, rendues par l'histoire (`ef65d71f^`) sous `assets/fondu/decals/`,
+  cœurs compris, et LEURS mesures (`FLAQUES_FONDUES`, `POIDS_TAILLE_FONDUS` de `blood_stain.gd` : celles d'avant le 2026-09-10, prises
+  sur ces masques mêmes). La règle d'Adrien tient (« le centre de la plus grosse tache sous le personnage ») :
+  `test_sang_au_sol` mesure sur le disque le jeu que `planches()` (`blood_stain.gd`) lui donne — les fondues sans drapeau, les encrées
+  sous `--sans-fondu` (sa nouvelle suite) —, 134 contrôles verts des deux côtés ; sang_1 a 21,0 px de rayon fondu, 25,0 encré.
+  ⚠️ Lire `ECLABOUSSURES` dans ce banc, comme avant, aurait mesuré les encrées pendant que le jeu pose les fondues : les taches
+  vivantes n'auraient plus retrouvé leur mesure, et leurs contrôles se seraient TUS au lieu de rougir.
+- **Les gouttes** (`ParticlePool.GOUTTES_SANG_FONDUES`), **la traçante et sa traînée** (`tracante.png`, `trainee.png`) : leurs
+  masques d'avant l'encrage, aux mêmes tailles.
+- **Les éclats des murs** : la planche d'août, lait et poussière photographiques — ses douze panneaux valides
+  (`ECLATS_FONDUS`, `wall_impact.gd`), à la place des seize étoiles d'encre.
+- **Le flash de mort** suit son intensité au lieu de ses trois paliers (`death_flash.gdshader`, `fondu`, posé par la mort) : le
+  geste d'origine — son extinction reste celle de DA4.13 —, toujours sans relire l'écran. Sous l'extinction, l'escalier tenait
+  le blanc 37 ms, puis 0,55 pendant 58 ms, puis 0,22 jusqu'à 273 ms ; le fondu passe par 0,84 à 16 ms, 0,57 à 50 ms, 0,31 à
+  100 ms, 0,10 à 200 ms : 21 % de blanc en moins au total (la marche à 0,22 tenait la queue). L'écran du mort seulement.
+- `--sans-fondu` rend les paliers ; l'encre (`--avec-encre`, `--encre-essai`) aussi — les paliers sont l'encre de ces effets.
+  Les masques encrés restent tous en place, et `test_encrage` les garde comme avant.
+
+**Ce qui ne change pas : les masques de LUMIÈRE (→ Q92).** Le halo de proximité, la rétrodiffusion, l'éclat et la lumière du
+flash de tir éclairent pour de vrai : `CapteurCorps` les rend sous chaque corps (l'éclat d'un ennemi dans la vue iso), et la
+perception du bot est étalonnée sur eux (`FRACTION_DISQUE`, validée par `banc_perception_bot` contre les capteurs, hors des
+suites ; `banc_equite_fusee` et `test_fusee_rouge_sang` échantillonnent la rétrodiffusion). Les adoucir changerait ce que
+chacun voit de l'autre : une règle de jeu, pas un rendu. L'éclat de bouche DESSINÉ partage aujourd'hui ses masques avec la
+lumière du flash : il reste aussi.
+
+**Les planches** (`docs/iso/rr/rr5/`, deux colonnes — les paliers (`--sans-fondu`) et le jeu ; photographe 1280×720,
+llvmpipe) :
+- `planche_rr5_masques.jpg` : les masques eux-mêmes, teintés comme le jeu les teint — la comparaison à l'identique, puisque
+  le jeu tire ses taches au sort d'une prise à l'autre. Le sang garde ses formes, ses bords s'adoucissent et sa matière
+  reparaît (l'alpha vient de la luminance d'une photographie) ; les éclats reprennent le dessin d'août ; la traînée de la
+  balle passe de trois anneaux à un dégradé, la traçante de deux marches à une extinction.
+- `planche_rr5_jeu.jpg` et `planche_rr5_loupe.jpg` (×3) : le sang sous J2 après 1,6 s de tir, l'aura de la balle au départ
+  du coup, le flash de mort.
+- **Une balle se voit d'aussi loin.** L'aura fondue porte au même rayon que l'encrée (alpha au-dessus de 0,1 jusqu'à
+  59,6 px), avec un cœur plus serré (au-dessus de 0,5 jusqu'à 33,8 px au lieu de 42,6) et 18 % d'énergie en moins ; la
+  traçante fondue en porte 15 % de plus, éteinte plus tard le long du trait. Ni l'une ni l'autre n'est une lumière : les
+  capteurs ne dessinent que leur disque (`canvas_cull_mask`), le bot et l'éblouissement lisent les lumières. Les deux joueurs
+  voient la même balle (`mesures_rr5.json`).
+- **Le flash de mort** (plan « mort », pris vers 300 ms sous llvmpipe) : les paliers sont déjà noirs, le fondu laisse encore
+  un voile de 12/255 qui s'éteint.
+
+**Cadence** : pas de série. Mêmes appels, mêmes tailles de masques — sauf les éclats, dont la planche d'août est un peu plus
+petite (54 à 96 px de côté au lieu de 87 à 96) — et le flash de mort perd trois comparaisons.
+
+**Les gardes** : `tools/test_rendu_rr.gd` passe de 77 à 91 vérifications et se joue sept fois (`--sans-fondu` en plus) : les
+38 masques fondus sont là, importés, FONDUS (32 niveaux d'alpha au moins, lus sur le disque), chacun avec son jumeau encré
+en paliers (deux à quatre niveaux) ; aucun masque de lumière n'a de jumeau ; le sang lit la planche et les mesures du même
+jeu ; les gouttes ; les éclats posés pour de vrai (douze planches vues, toutes fondues ; seize, toutes encrées, sous
+`--sans-fondu` ou l'encre) ; la traçante ; le flash et la mort qui le pose. `test_sang_au_sol` se joue deux fois.
+**Douze sabotages, chacun rouge puis restauré (md5)** (`docs/iso/rr/rr5/sabotages_rr5.json`) : F1 l'encre ne rend plus les paliers ; F2 `--sans-fondu` ignoré ; F3 le masque d'effet ne
+rend jamais le jumeau fondu (rouge aussi dans `test_sang_au_sol` : les planches encrées, mesurées contre les poids fondus,
+débordent du corps) ; F4 la tache lit l'ancre encrée en direct — seule la garde de source le voit : l'écart d'ancre, quelques
+pixels, tient dans la tolérance du banc du sang ; F5 une mesure fondue fausse (sang_1 reçoit la flaque de son encre :
+`test_sang_au_sol`) ; F6 les gouttes restent encrées ; F7 les éclats tirés parmi les seize d'encre (quatre n'ont pas de
+jumeau fondu) ; F8 la traçante contourne le masque d'effet ; F9 le flash garde ses paliers ; F10 la mort oublie de poser le
+fondu ; F11 un masque « fondu » qui est de l'encre (sang_3 recopié de son jumeau) ; F12 un masque de LUMIÈRE reçoit un
+jumeau fondu (Q92).
+
+**Suite entière** : 199 suites vertes, aucune rouge, sans erreur de script (25 min 47 s). La vérification qui la ferme a
+rougi : les 76 fichiers de `assets/fondu/` (38 masques et leurs `.import`) n'étaient pas encore suivis par git — « ils
+s'affichent, les bancs sont verts, et ils meurent avec la machine ». Ajoutés au commit, elle passe, relancée seule : c'est
+exactement le cas qu'elle existe pour attraper.
+
+**Trouvé en chemin, signalé, pas corrigé** (hors périmètre) : dans `presentation_3d.gd`, la fin de `_suivre()` — les
+miroirs d'ISO4, la lueur des LED de RR3, les lumières — vit SOUS l'en-tête « LES LIGHTMAPS », derrière une ligne où deux
+commentaires se sont soudés (« ## `1080p` ou `plein` : `--lightmap` pour l'exécution… » puis « # ISO4 — les miroirs… », ligne
+932). Un reste de fusion, déjà là au greffon `c8cdf5c5` (2026-09-28). Le code tourne bien dans `_suivre()` — l'indentation
+décide —, mais l'en-tête de section est au milieu d'une fonction, et `variante_lightmap()`, plus bas, a perdu sa ligne de
+documentation. À remettre en place par qui touchera ce fichier : déplacer l'en-tête et la ligne `##` juste au-dessus de
+`variante_lightmap()`, garder « # ISO4 — les miroirs… » dans `_suivre()`.
+
+#### Q92 — adoucir aussi les lumières ?
+
+**Q92 — Les masques de LUMIÈRE — halo de proximité, rétrodiffusion, éclat, lumière du flash de tir (et l'éclat de bouche
+dessiné, qui les partage) — gardent leurs paliers. Les adoucir ?** (a) **Non** — ce sont des règles de jeu : les capteurs les
+rendent, le bot y est étalonné ; leurs marches ne se lisent qu'au bord d'une flaque de lumière, que la courbe de RR2 et les
+lueurs de RR4 adoucissent déjà ; (b) **oui, derrière un drapeau d'abord** (`--lumieres-fondues`), puis `banc_perception_bot`
+rejoué (« aucune prise où le modèle voit un capteur noir ») et l'équité de la fusée (`banc_equite_fusee`) avant d'en faire le
+défaut ; (c) l'éclat de bouche DESSINÉ seulement — l'image, pas la lumière : lui donner ses propres masques fondus. **Avis :
+(a)**, et (c) si l'éclat dessiné se voit trop « encre » en jeu (H17).
+
 #### Jalon H17 — ce qui attend Adrien
 
 RR1 est dans `main` depuis la fusion de la PR 8 ; les étapes suivantes arrivent sur la même branche de chantier, une PR par
@@ -36134,3 +36223,6 @@ lot.
 5. RR4 : les sources vives rayonnent — l'éclat de bouche, la fusée, la mine, les plafonniers, la lentille d'une torche —, et des
    grains de poussière dérivent dans le faisceau ; `-- --sans-rayonnement` et `-- --sans-poussiere` les retirent. Dire : le
    rayonnement est-il assez large, ou trop ; la poussière se voit-elle en mouvement, sans distraire du faisceau ?
+6. RR5 : le sang, les gouttes, les éclats des murs, la traçante et le flash de mort sont fondus ; `-- --sans-fondu` rend
+   les paliers. Dire : le sang se lit-il encore sur le sol (ses bords francs l'en détachaient) ; les éclats d'août vont-ils
+   au jeu ? Q92 — les lumières gardent-elles leurs paliers ?

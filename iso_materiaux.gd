@@ -150,6 +150,34 @@ static func lueur_led() -> float:
 	return LUEUR_LED
 
 
+## Chantier RR, RR5 — LES EFFETS EN JEU, DU PALIER AU FONDU (Q83, Adrien, 2026-10-05 : « brute, sans paliers » ; puis « plus
+## réaliste, plus fluide »). La refonte roman graphique avait encré les masques des effets (lot 1, 2026-09-10 : sang au sol,
+## gouttes, éclats des murs, traçante) et mis le flash de mort en trois paliers (lot 3) ; l'ordre 54 (2026-09-15) refusait de
+## rouvrir cette règle. RR5 la rouvre EN JEU SEULEMENT — ces effets n'existent qu'en partie, aucun menu ne les charge : les
+## masques d'avant l'encrage, rendus par l'histoire (`ef65d71f^`), vivent sous `assets/fondu/`, au même chemin relatif que
+## leur jumeau encré, qui reste en place et que `test_encrage` garde toujours. `--sans-fondu` rend les paliers (comparer) ;
+## l'encre (`--avec-encre`, `--encre-essai`) les rend aussi : les paliers SONT l'encre de ces effets.
+##
+## ⚠️ **Les masques de LUMIÈRE ne changent pas** : le halo de proximité, la rétrodiffusion et la lumière du flash de tir
+## éclairent pour de vrai — les capteurs des corps les rendent, la perception du bot est étalonnée sur eux. Une règle de jeu,
+## pas un rendu : Q92.
+const DRAPEAU_SANS_FONDU := "--sans-fondu"
+const DOSSIER_FONDU := "res://assets/fondu/"
+
+
+static func effets_fondus() -> bool:
+	return not encre_active() and not DrapeauxDeLancement.present(DRAPEAU_SANS_FONDU)
+
+
+## Le masque d'un effet en jeu : son jumeau FONDU (`assets/fondu/`, même chemin relatif) quand les effets sont fondus et qu'il
+## existe ; sinon le masque encré, inchangé.
+static func masque_d_effet(chemin: String) -> String:
+	if not effets_fondus() or not chemin.begins_with("res://assets/"):
+		return chemin
+	var fondu := DOSSIER_FONDU + chemin.trim_prefix("res://assets/")
+	return fondu if ResourceLoader.exists(fondu) else chemin
+
+
 ## Les variantes des shaders iso compilées avec un `#define` d'essai, une par shader d'origine et par drapeau.
 static var _variantes := {}
 
