@@ -1,0 +1,350 @@
+[
+ {
+  "id": "E1",
+  "titre": "l'encre redevient la règle (la lecture d'avant RR3)",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ sans drapeau d'encre, le jeu n'en pose aucune",
+     "✗ la règle : --sans-encre d'abord, puis --avec-encre ou --encre-essai, sinon aucune encre  → static func encre_active() -> bool:"
+    ],
+    "bilan": "62 vérifications, 2 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "E2",
+  "titre": "--sans-encre ne l'emporte plus sur --encre-essai",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr_sans_encre": {
+    "code": 1,
+    "echecs": [
+     "✗ --sans-encre l'emporte sur tout autre drapeau",
+     "✗ la règle : --sans-encre d'abord, puis --avec-encre ou --encre-essai, sinon aucune encre  → static func encre_active() -> bool:",
+     "✗ avec encre : les arêtes, comme avant RR3 (2.4 px, reste 0.12)",
+     "✗ l'encre renforcée, demandée aussi (--encre-essai), cède à --sans-encre"
+    ],
+    "bilan": "63 vérifications, 4 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "E3",
+  "titre": "--avec-encre ignoré",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr_avec_encre": {
+    "code": 1,
+    "echecs": [
+     "✗ --avec-encre la remet",
+     "✗ la règle : --sans-encre d'abord, puis --avec-encre ou --encre-essai, sinon aucune encre  → static func encre_active() -> bool:"
+    ],
+    "bilan": "62 vérifications, 2 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "E4",
+  "titre": "la fumée garde son encre sans l'encre",
+  "fichiers": [
+   "iso_nuage_voxel.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ sans encre : l'encre de la fumée est « aucune » (2)",
+     "✗ une encre de fumée demandée nommément cède à l'essai"
+    ],
+    "bilan": "62 vérifications, 2 échec(s)",
+    "script_errors": 0
+   },
+   "test_fumee_voxel": {
+    "code": 1,
+    "echecs": [
+     "✗ « cartouche_suie » : l'encre et le relief sont ceux de la partie (« volutes », « dessin »)",
+     "✗ les 5 encres et les 2 reliefs basculent sur place, dans les deux vues, sans refaire le nuage  → 3 justes",
+     "✗ « poussiere » : l'encre et le relief sont ceux de la partie (« volutes », « dessin »)"
+    ],
+    "bilan": "✗ 3 test(s) en échec",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "E5",
+  "titre": "les corps gardent leur encre sans l'encre",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ sans encre : les arêtes des voxels ne sont plus tracées (0.90 px)"
+    ],
+    "bilan": "62 vérifications, 1 échec(s)",
+    "script_errors": 0
+   },
+   "test_iso_beaute": {
+    "code": 1,
+    "echecs": [
+     "✗ accorder_corps pose l'encre des voxels — aucune, le jeu (0.00 px)"
+    ],
+    "bilan": "162 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "L1",
+  "titre": "la lueur des LED reste avec l'encre (le trait ET la lueur)",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr_avec_encre": {
+    "code": 1,
+    "echecs": [
+     "✗ mur_iso.gdshader : lueur 0.0 (l'encre est là, et son trait)",
+     "✗ mur_iso_eclaire.gdshader : lueur 0.0 (l'encre est là, et son trait)",
+     "✗ sans beauté, et sous l'encre (le trait reprend sa place), aucune lueur"
+    ],
+    "bilan": "62 vérifications, 3 échec(s)",
+    "script_errors": 0
+   },
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ sans beauté, et sous l'encre (le trait reprend sa place), aucune lueur"
+    ],
+    "bilan": "62 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "L2",
+  "titre": "la lueur en TERME ajouté (c +=), qui éclairerait une face que la lightmap laisse noire",
+  "fichiers": [
+   "mur_iso.gdshader"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ mur du jeu : la lueur se pose sur la face, après la matière et le contact, avant la courbe — une fois  → matière 16845, lueur -1, courbe 17766",
+     "✗ mur du jeu : la lueur relève la PART de la bande dans la lumière reçue (lue juste avant), sans terme ajouté"
+    ],
+    "bilan": "62 vérifications, 2 échec(s)",
+    "script_errors": 0
+   },
+   "test_iso_beaute": {
+    "code": 1,
+    "echecs": [
+     "✗ aucun terme additif sur la couleur (c += / c -=)",
+     "✗ matière, encre et liseré passent par pate_facteur, jamais par c *= (4)"
+    ],
+    "bilan": "162 vérifications, 2 échec(s)",
+    "script_errors": 0
+   },
+   "test_banc": {
+    "code": 1,
+    "echecs": [
+     "✗ le principe d'identité : chaque étape du fragment 2D du sol et des murs est dans le fragment éclairé  → mur_iso : « c += lumiere_des_led(monde.xz + n * pied, peinture_ref) * led_lueur * exp(-hauteur_face / led_lueur_px); »"
+    ],
+    "bilan": "✗ 1 test(s) en échec",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "L3",
+  "titre": "la lueur relève TOUTE la lumière au pied (la torche comprise), pas la part de la bande",
+  "fichiers": [
+   "mur_iso.gdshader"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ mur du jeu : la lueur relève la PART de la bande dans la lumière reçue (lue juste avant), sans terme ajouté"
+    ],
+    "bilan": "62 vérifications, 1 échec(s)",
+    "script_errors": 0
+   },
+   "test_banc": {
+    "code": 1,
+    "echecs": [
+     "✗ le principe d'identité : chaque étape du fragment 2D du sol et des murs est dans le fragment éclairé  → mur_iso : « float part_led = 1.0; »"
+    ],
+    "bilan": "✗ 1 test(s) en échec",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "L4",
+  "titre": "`lumiere_des_led` lit la bande éteinte (la sortie en tête retirée)",
+  "fichiers": [
+   "mur_iso.gdshader"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ `lumiere_des_led` : la même dans les deux murs",
+     "✗ `lumiere_des_led` rend 0 sans bande ou sans lueur, avant toute lecture, et 0 hors du rectangle de la bande"
+    ],
+    "bilan": "62 vérifications, 2 échec(s)",
+    "script_errors": 0
+   },
+   "test_banc": {
+    "code": 1,
+    "echecs": [
+     "✗ le principe d'identité : les fonctions du chemin 2D, recopiées dans les shaders éclairés, y sont identiques  → mur_iso / mur_iso_eclaire : vec3 lumiere_des_led(vec2 px, vec3 ref)"
+    ],
+    "bilan": "✗ 1 test(s) en échec",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "L5",
+  "titre": "la copie du mur éclairé dérive (le rectangle de la bande ignoré)",
+  "fichiers": [
+   "mur_iso_eclaire.gdshader"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ `lumiere_des_led` : la même dans les deux murs"
+    ],
+    "bilan": "62 vérifications, 1 échec(s)",
+    "script_errors": 0
+   },
+   "test_banc": {
+    "code": 1,
+    "echecs": [
+     "✗ le principe d'identité : les fonctions du chemin 2D, recopiées dans les shaders éclairés, y sont identiques  → mur_iso / mur_iso_eclaire : vec3 lumiere_des_led(vec2 px, vec3 ref)"
+    ],
+    "bilan": "✗ 1 test(s) en échec",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "L6",
+  "titre": "la présentation ne repose plus la bande à chaque image",
+  "fichiers": [
+   "presentation_3d.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ la présentation repose la bande à chaque image (`_suivre`), hors de la branche de la lumière 3D"
+    ],
+    "bilan": "62 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "L7",
+  "titre": "la couleur de la bande posée même éteinte",
+  "fichiers": [
+   "presentation_3d.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ …relue sur la lumière : sa couleur × son énergie, NOIRE éteinte ou cachée"
+    ],
+    "bilan": "62 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "L8",
+  "titre": "accorder_mur oublie la lueur",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ mur_iso.gdshader : lueur 10.0 (le jeu)",
+     "✗ mur_iso_eclaire.gdshader : lueur 10.0 (le jeu)"
+    ],
+    "bilan": "62 vérifications, 2 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "L9",
+  "titre": "une lueur nulle (éteinte en silence)",
+  "fichiers": [
+   "iso_materiaux.gd"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ la lueur du jeu est une vraie lueur (facteur 0.0 au ras du sol sur la part de la bande, retombé à 1/e à 8 px)"
+    ],
+    "bilan": "62 vérifications, 1 échec(s)",
+    "script_errors": 0
+   }
+  },
+  "restaure": true
+ },
+ {
+  "id": "L10",
+  "titre": "la lueur posée APRÈS la courbe (relevée par elle, hors de son ordre)",
+  "fichiers": [
+   "mur_iso.gdshader"
+  ],
+  "rouges": {
+   "test_rendu_rr": {
+    "code": 1,
+    "echecs": [
+     "✗ mur du jeu : la lueur se pose sur la face, après la matière et le contact, avant la courbe — une fois  → matière 16845, lueur 17688, courbe 17659"
+    ],
+    "bilan": "62 vérifications, 1 échec(s)",
+    "script_errors": 2
+   }
+  },
+  "restaure": true
+ }
+]

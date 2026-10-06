@@ -83,6 +83,10 @@ uniform vec2 led_origine_px = vec2(0.0);
 uniform vec2 led_taille_px = vec2(1.0);
 uniform vec3 led_couleur = vec3(0.0);
 uniform float led_gain = 1.0;
+// Chantier RR, RR3 — la lueur des LED au pied des murs (Q90 = (b)) : celle de `mur_iso.gdshader`, au chemin 2D seulement
+// (`identite_2d`) — l'ancien chemin a déjà sa LED en émission (`lire_led`, `led_gain`).
+uniform float led_lueur = 0.0;
+uniform float led_lueur_px = 8.0;
 // ISO12 — le halo de proximité de chaque joueur (`ambient_light`), qui n'éclaire que la vue de son porteur : une émission PAR VUE,
 // comme la silhouette de soi. La vue 1 lit le halo de J1, la vue 2 celui de J2 (xy : position en px de monde, z : énergie, 0 éteint).
 uniform sampler2D halo_soi_texture : filter_linear, repeat_disable;
@@ -212,6 +216,20 @@ vec3 lire_lumiere(vec2 px, bool deux, vec3 ref, float plancher) {
 vec3 lire_lumiere_moyenne(vec2 p, vec2 le_long, bool deux, vec3 ref, float plancher) {
 	return 0.25 * (lire_lumiere(p - le_long * 1.875, deux, ref, plancher) + lire_lumiere(p - le_long * 0.625, deux, ref, plancher)
 		+ lire_lumiere(p + le_long * 0.625, deux, ref, plancher) + lire_lumiere(p + le_long * 1.875, deux, ref, plancher));
+}
+
+// Chantier RR, RR3 — la lumière que la bande de LED (`MurLed`) verse au point `px` du sol, à l'échelle où une face lit la
+// sienne (la lumière × la couleur moyenne du sol peint, `ref` — voir `lire_lumiere`) : 0 hors de la bande, LED éteinte, ou sans
+// lueur. Blanc partout, l'intensité dans l'alpha (`MurLed.cuire`).
+vec3 lumiere_des_led(vec2 px, vec3 ref) {
+	if (!led_active || led_lueur <= 0.0) {
+		return vec3(0.0);
+	}
+	vec2 uv = (px - led_origine_px) / led_taille_px;
+	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
+		return vec3(0.0);
+	}
+	return textureLod(led_texture, uv, 0.0).a * led_couleur * ref;
 }
 
 vec3 lightmap_pateuse_lue(vec3 c, vec2 motif, float aa) {
@@ -354,6 +372,13 @@ void fragment() {
 #ifdef USURE_ESSAI
 		c = pate_facteur(c, usure_poids(c, usure_face(monde.xz, n, tangente, hauteur_face, taille.y, px_monde)));
 #endif
+		if (identite_2d) {
+			// Chantier RR, RR3 — la lueur des LED (Q90 = (b)) : la PART de la bande dans la lumière reçue au pied, relevée près du
+			// sol et éteinte en montant — un facteur sur la lumière lue (`pate_facteur`), jamais un terme : sans lumière au pied,
+			// rien ; sous une torche, la torche n'est pas relevée.
+			float part_led = clamp(pate_luminance(lumiere_des_led(monde.xz + n * pied, peinture_ref)) / max(pate_luminance(brute), 0.0001), 0.0, 1.0);
+			c = pate_facteur(c, 1.0 + led_lueur * exp(-hauteur_face / led_lueur_px) * part_led);
+		}
 	}
 	// LE PRINCIPE D'IDENTITÉ : la température de `mur_iso.gdshader`, ligne pour ligne ; l'ancien chemin n'en avait pas (« la
 	// couleur de la lumière est celle de la Light3D »), et la face chaude en 2D sortait grise.

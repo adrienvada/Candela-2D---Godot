@@ -275,7 +275,11 @@ func _la_pate_des_voxels() -> void:
 	_check("crochet : IsoMateriaux.accorder_corps dans presentation_3d.gd", pres.contains("IsoMateriaux.accorder_corps(mat)"))
 	var mat := ShaderMaterial.new()
 	IsoMateriaux.accorder_corps(mat)
-	_check("accorder_corps pose l'encre des voxels", is_equal_approx(float(mat.get_shader_parameter("encre_arete")), largeur)
+	# Chantier RR, RR3 — l'encre est l'exception (Q90 = (b), `IsoMateriaux.encre_active`, `--avec-encre`) : sans elle, une largeur
+	# nulle ; le reste est posé dans les deux cas. La suite rejoue ce test sous `--avec-encre`.
+	var attendue := largeur if IsoMateriaux.encre_active() else 0.0
+	_check("accorder_corps pose l'encre des voxels — %s (%.2f px)" % ["l'encre demandée" if IsoMateriaux.encre_active()
+		else "aucune, le jeu", attendue], is_equal_approx(float(mat.get_shader_parameter("encre_arete")), attendue)
 		and is_equal_approx(float(mat.get_shader_parameter("encre_reste")), reste))
 
 	print("— la lumière vue : la température (étape 6)")

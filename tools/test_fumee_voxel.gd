@@ -67,6 +67,13 @@ func _init() -> void:
 	call_deferred("_run")
 
 
+## Chantier RR, RR3 — l'encre POSÉE sur un nuage : celle qu'on demande si l'encre est là (`--avec-encre`), « aucune » sinon —
+## l'encre est l'exception depuis Q90 = (b) (`IsoMateriaux.encre_active`, `IsoNuageVoxel.poser_style`). La suite rejoue ce test
+## sous `--avec-encre` : les encres y basculent pour de vrai.
+func _encre_posee(style: String) -> int:
+	return int(IsoNuageVoxel.ENCRES[style]) if IsoMateriaux.encre_active() else int(IsoNuageVoxel.ENCRES["aucune"])
+
+
 func _run() -> void:
 	_attendu = {"voxel": true, "variante": IsoNuageVoxel.VARIANTE_PAR_DEFAUT, "encre": IsoNuageVoxel.ENCRE_PAR_DEFAUT,
 		"relief": IsoNuageVoxel.RELIEF_PAR_DEFAUT}
@@ -687,7 +694,7 @@ func _le_nuage(main: Node, p: Node, volumes: IsoVolumes, g: Node2D, slug: String
 		is_equal_approx(float(mat0.get_shader_parameter("nuage_vie")),
 			Presentation3D.opacite_rendue(visuel) * float(IsoNuageVoxel.NUAGES[slug]["densite"])))
 	_check("« %s » : l'encre et le relief sont ceux de la partie (« %s », « %s »)" % [slug, volumes.encre_voxel, volumes.relief_voxel],
-		int(mat0.get_shader_parameter("encre_style")) == int(IsoNuageVoxel.ENCRES[volumes.encre_voxel])
+		int(mat0.get_shader_parameter("encre_style")) == _encre_posee(volumes.encre_voxel)
 		and int(mat0.get_shader_parameter("relief_style")) == int(IsoNuageVoxel.RELIEFS[volumes.relief_voxel]))
 	# L'ÉQUITÉ : les deux vues reçoivent TOUS les mêmes réglages, au choix de la vue près.
 	var ecarts := _ecarts_entre_vues(mat0, mat1)
@@ -764,7 +771,7 @@ func _les_encres_basculent(main: Node, p: Node, volumes: IsoVolumes, g: Node2D) 
 		p.call("_suivre")
 		var ee: Dictionary = volumes.suivi_de(g)
 		if ee.get("noeuds", []) == noeuds and (ee["mats"] as Array).all(func(m): return int((m as ShaderMaterial).get_shader_parameter(
-				"encre_style")) == int(IsoNuageVoxel.ENCRES[style])):
+				"encre_style")) == _encre_posee(style)):
 			justes += 1
 	for r: String in IsoNuageVoxel.RELIEFS:
 		volumes.poser_fumee_voxel(true, "", "", r)

@@ -70,6 +70,18 @@ uniform float temperature_seuil_haut : hint_range(0.0, 1.0) = 0.0;
 uniform float neutre_avant_pate : hint_range(0.0, 1.0) = 0.0;
 // Chantier RR, RR2 — la lumière peinte (`pate_courbe`, `iso_pate.gdshaderinc`) : sa force ; 0, la lumière telle quelle.
 uniform float courbe : hint_range(0.0, 1.0) = 0.0;
+// Chantier RR, RR3 — la lueur des LED au pied des murs (Q90 = (b), `lumiere_des_led`) : la bande de `MurLed` (sa texture, son
+// rectangle du monde, sa couleur de CETTE image — noire éteinte), posée à chaque image par la présentation
+// (`Presentation3D._accorder_la_lueur_led`) ; `led_lueur`, le facteur au ras du sol sur la part de la bande dans la lumière
+// reçue, en lumière linéaire (`pate_facteur` ; 0 : aucune lueur — le mur de RR2), et `led_lueur_px`, la hauteur où ce surcroît
+// retombe à 1/e (`IsoMateriaux`).
+uniform sampler2D led_texture : filter_linear, repeat_disable;
+uniform bool led_active = false;
+uniform vec2 led_origine_px = vec2(0.0);
+uniform vec2 led_taille_px = vec2(1.0);
+uniform vec3 led_couleur = vec3(0.0);
+uniform float led_lueur = 0.0;
+uniform float led_lueur_px = 8.0;
 
 // La grille des murs : R = mur haut, G = muret ; un texel par tuile, bordure comprise.
 uniform sampler2D grille_murs : filter_nearest, repeat_disable;
@@ -142,6 +154,20 @@ vec3 lire_lumiere(vec2 px, bool deux, vec3 ref, float plancher) {
 vec3 lire_lumiere_moyenne(vec2 p, vec2 le_long, bool deux, vec3 ref, float plancher) {
 	return 0.25 * (lire_lumiere(p - le_long * 1.875, deux, ref, plancher) + lire_lumiere(p - le_long * 0.625, deux, ref, plancher)
 		+ lire_lumiere(p + le_long * 0.625, deux, ref, plancher) + lire_lumiere(p + le_long * 1.875, deux, ref, plancher));
+}
+
+// Chantier RR, RR3 — la lumière que la bande de LED (`MurLed`) verse au point `px` du sol, à l'échelle où une face lit la
+// sienne (la lumière × la couleur moyenne du sol peint, `ref` — voir `lire_lumiere`) : 0 hors de la bande, LED éteinte, ou sans
+// lueur. Blanc partout, l'intensité dans l'alpha (`MurLed.cuire`).
+vec3 lumiere_des_led(vec2 px, vec3 ref) {
+	if (!led_active || led_lueur <= 0.0) {
+		return vec3(0.0);
+	}
+	vec2 uv = (px - led_origine_px) / led_taille_px;
+	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
+		return vec3(0.0);
+	}
+	return textureLod(led_texture, uv, 0.0).a * led_couleur * ref;
 }
 
 vec3 lightmap_pateuse_lue(vec3 c, vec2 motif, float aa) {
@@ -269,6 +295,11 @@ void fragment() {
 #ifdef USURE_ESSAI
 		c = pate_facteur(c, usure_poids(c, usure_face(monde.xz, n, tangente, hauteur_face, taille.y, px_monde)));
 #endif
+		// Chantier RR, RR3 — la lueur des LED (Q90 = (b)) : la PART de la bande dans la lumière reçue au pied, relevée près du
+		// sol et éteinte en montant — un facteur sur la lumière lue (`pate_facteur`), jamais un terme : sans lumière au pied,
+		// rien ; sous une torche, la torche n'est pas relevée.
+		float part_led = clamp(pate_luminance(lumiere_des_led(monde.xz + n * pied, peinture_ref)) / max(pate_luminance(brute), 0.0001), 0.0, 1.0);
+		c = pate_facteur(c, 1.0 + led_lueur * exp(-hauteur_face / led_lueur_px) * part_led);
 	}
 	// Chantier RR, RR2 — la lumière peinte, avant la température, sur l'octet : rien ne bouge sous le pied.
 	c = pate_courbe(c, courbe);

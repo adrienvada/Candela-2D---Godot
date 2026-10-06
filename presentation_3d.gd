@@ -934,6 +934,8 @@ func _suivre() -> void:
 	for vue in _vues:
 		ids.append(_id_de(vue))
 	_miroirs.suivre(_main, ids, style_pate, self)
+	# Chantier RR, RR3 — la lueur des LED au pied des murs suit la respiration de la bande : sa couleur, à chaque image.
+	_accorder_la_lueur_led()
 	if _lumieres != null:
 		_lumieres.call("suivre", _main, _voxels)
 		# ISO12 v27 — le relief APRÈS `suivre` : les lampes de CETTE image, celles que le moteur rend. Il n'était posé qu'à la
@@ -2099,6 +2101,30 @@ func _eclairer_le_corps(j: int) -> void:
 	for boite in (_voxels[j] as Node).find_children("*", "MeshInstance3D", true, false):
 		var mi := boite as MeshInstance3D
 		mi.cast_shadow = reglage if mi.material_override == mat else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+## Chantier RR, RR3 — LA LUEUR DES LED AU PIED DES MURS (Q90 = (b)) : la bande de `Arena/MurLed` posée sur le matériau des murs
+## du jeu (`mur_iso.gdshader`, `lumiere_des_led`) — sa texture, le rectangle du monde qu'elle couvre (centré sur la lumière,
+## `texture_scale` fois sa taille) et sa couleur de CETTE image, noire si elle est éteinte (le creux de la respiration, ou
+## `enabled` à faux). À chaque image, même lumière 3D éteinte : la lueur respire avec la bande. Lu sur la lumière elle-même, jamais
+## recalculé : ce que la lueur montre est exactement ce que la bande verse au sol, pour les deux vues (un seul matériau).
+func _accorder_la_lueur_led() -> void:
+	if _mat_mur == null:
+		return
+	var led: PointLight2D = null
+	if _main != null and _main.arena != null:
+		led = _main.arena.get_node_or_null(^"MurLed") as PointLight2D
+	var active := led != null and led.texture != null
+	var couleur := Vector3.ZERO
+	if active:
+		var taille := Vector2(led.texture.get_size()) * led.texture_scale
+		_mat_mur.set_shader_parameter("led_texture", led.texture)
+		_mat_mur.set_shader_parameter("led_origine_px", led.global_position - taille * 0.5)
+		_mat_mur.set_shader_parameter("led_taille_px", taille)
+		if led.enabled and led.is_visible_in_tree():
+			couleur = Vector3(led.color.r, led.color.g, led.color.b) * led.energy
+	_mat_mur.set_shader_parameter("led_active", active)
+	_mat_mur.set_shader_parameter("led_couleur", couleur)
 
 
 ## ISO12 — le bandeau de LED des murs (`Arena/MurLed`) sur le sol et les murs éclairés : sa texture, le rectangle du monde

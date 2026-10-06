@@ -1,0 +1,218 @@
+{
+ "loupe-pilier": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "taille": [
+   800,
+   450
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   167320,
+   164132,
+   165960,
+   233266
+  ],
+  "moyenne_luma_allumee": [
+   15.9,
+   14.9,
+   17.4,
+   24.9
+  ],
+  "p99_luma_allumee": [
+   97.3,
+   90.8,
+   95.9,
+   104.1
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   5471,
+   19826,
+   148067
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   3247,
+   3608,
+   189
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   59,
+   2248,
+   66135
+  ]
+ },
+ "loupe-sol": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "taille": [
+   800,
+   450
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   166102,
+   162945,
+   164515,
+   234691
+  ],
+  "moyenne_luma_allumee": [
+   15.6,
+   14.7,
+   17.1,
+   24.5
+  ],
+  "p99_luma_allumee": [
+   93.7,
+   90.4,
+   93.5,
+   101.6
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   5246,
+   19011,
+   149426
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   3176,
+   3414,
+   51
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   19,
+   1827,
+   68640
+  ]
+ },
+ "loupe-corps-j1": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "taille": [
+   800,
+   450
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   157437,
+   154616,
+   156622,
+   230204
+  ],
+  "moyenne_luma_allumee": [
+   15.6,
+   14.8,
+   17.0,
+   23.8
+  ],
+  "p99_luma_allumee": [
+   97.5,
+   92.7,
+   96.3,
+   101.7
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   4724,
+   16839,
+   144541
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   2832,
+   2794,
+   56
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   11,
+   1979,
+   72823
+  ]
+ },
+ "loupe-corps-j2": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "taille": [
+   800,
+   450
+  ],
+  "colonnes": [
+   "AVEC ENCRE — le trait (RR2)",
+   "SANS ENCRE NI LUEUR (l'essai de RR1)",
+   "RR3 — la lueur des LED, à mi-souffle",
+   "RR3 — la lueur, au sommet du souffle"
+  ],
+  "allumes_au_dessus_de_8": [
+   164497,
+   161450,
+   163557,
+   241512
+  ],
+  "moyenne_luma_allumee": [
+   15.5,
+   14.7,
+   16.9,
+   23.9
+  ],
+  "p99_luma_allumee": [
+   94.5,
+   90.6,
+   93.8,
+   101.1
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   5021,
+   18117,
+   152450
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   3058,
+   3018,
+   62
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   11,
+   2078,
+   77077
+  ]
+ }
+}

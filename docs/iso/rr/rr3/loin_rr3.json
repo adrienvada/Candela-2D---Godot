@@ -1,0 +1,110 @@
+{
+ "torche": {
+  "p_encre": {
+   "allumes_loin": 29528,
+   "luma_moyenne_loin": 14.5
+  },
+  "p_rien": {
+   "allumes_loin": 26129,
+   "luma_moyenne_loin": 9.4
+  },
+  "p_lueur": {
+   "allumes_loin": 38278,
+   "luma_moyenne_loin": 18.9
+  },
+  "p_lueur_pic": {
+   "allumes_loin": 2624,
+   "luma_moyenne_loin": 14.1
+  }
+ },
+ "duel": {
+  "p_encre": {
+   "allumes_loin": 29753,
+   "luma_moyenne_loin": 14.4
+  },
+  "p_rien": {
+   "allumes_loin": 25689,
+   "luma_moyenne_loin": 9.4
+  },
+  "p_lueur": {
+   "allumes_loin": 38263,
+   "luma_moyenne_loin": 18.9
+  },
+  "p_lueur_pic": {
+   "allumes_loin": 3411,
+   "luma_moyenne_loin": 14.4
+  }
+ },
+ "volume": {
+  "p_encre": {
+   "allumes_loin": 18487,
+   "luma_moyenne_loin": 14.8
+  },
+  "p_rien": {
+   "allumes_loin": 23886,
+   "luma_moyenne_loin": 11.2
+  },
+  "p_lueur": {
+   "allumes_loin": 32746,
+   "luma_moyenne_loin": 19.4
+  },
+  "p_lueur_pic": {
+   "allumes_loin": 0,
+   "luma_moyenne_loin": 0.0
+  }
+ },
+ "plafonnier-brute": {
+  "p_encre": {
+   "allumes_loin": 35494,
+   "luma_moyenne_loin": 15.2
+  },
+  "p_rien": {
+   "allumes_loin": 38027,
+   "luma_moyenne_loin": 10.1
+  },
+  "p_lueur": {
+   "allumes_loin": 73436,
+   "luma_moyenne_loin": 16.6
+  },
+  "p_lueur_pic": {
+   "allumes_loin": 64878,
+   "luma_moyenne_loin": 15.5
+  }
+ },
+ "lumieres-salle09": {
+  "p_encre": {
+   "allumes_loin": 70188,
+   "luma_moyenne_loin": 15.0
+  },
+  "p_rien": {
+   "allumes_loin": 84428,
+   "luma_moyenne_loin": 12.3
+  },
+  "p_lueur": {
+   "allumes_loin": 144838,
+   "luma_moyenne_loin": 16.4
+  },
+  "p_lueur_pic": {
+   "allumes_loin": 167474,
+   "luma_moyenne_loin": 15.0
+  }
+ },
+ "brouillage-torche": {
+  "p_encre": {
+   "allumes_loin": 65447,
+   "luma_moyenne_loin": 17.2
+  },
+  "p_rien": {
+   "allumes_loin": 104940,
+   "luma_moyenne_loin": 14.4
+  },
+  "p_lueur": {
+   "allumes_loin": 195398,
+   "luma_moyenne_loin": 17.9
+  },
+  "p_lueur_pic": {
+   "allumes_loin": 88978,
+   "luma_moyenne_loin": 16.1
+  }
+ }
+}
