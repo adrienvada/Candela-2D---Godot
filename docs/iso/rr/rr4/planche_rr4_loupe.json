@@ -1,0 +1,162 @@
+{
+ "loupe-pilier": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "taille": [
+   800,
+   450
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   165920,
+   165871
+  ],
+  "moyenne_luma_allumee": [
+   17.4,
+   17.4
+  ],
+  "p99_luma_allumee": [
+   95.6,
+   95.6
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   275
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   677
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   628
+  ]
+ },
+ "loupe-sol": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "taille": [
+   800,
+   450
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   164783,
+   164709
+  ],
+  "moyenne_luma_allumee": [
+   17.1,
+   17.1
+  ],
+  "p99_luma_allumee": [
+   93.1,
+   93.2
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   323
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   176
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   102
+  ]
+ },
+ "loupe-corps-j1": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "taille": [
+   800,
+   450
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   156137,
+   156179
+  ],
+  "moyenne_luma_allumee": [
+   17.0,
+   17.0
+  ],
+  "p99_luma_allumee": [
+   95.8,
+   95.6
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   321
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   109
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   151
+  ]
+ },
+ "loupe-corps-j2": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "taille": [
+   800,
+   450
+  ],
+  "colonnes": [
+   "AVANT — sans rayonnement ni poussière (RR3)",
+   "RR4 — le rayonnement des sources, la poussière dans le faisceau"
+  ],
+  "allumes_au_dessus_de_8": [
+   163043,
+   163097
+  ],
+  "moyenne_luma_allumee": [
+   16.9,
+   16.9
+  ],
+  "p99_luma_allumee": [
+   93.5,
+   93.1
+  ],
+  "ecart_a_la_premiere": [
+   0,
+   321
+  ],
+  "eteints_par_rapport_a_la_premiere": [
+   0,
+   119
+  ],
+  "allumes_par_rapport_a_la_premiere": [
+   0,
+   173
+  ]
+ }
+}

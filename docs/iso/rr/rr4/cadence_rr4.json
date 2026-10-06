@@ -1,0 +1,101 @@
+{
+ "scene": "duel de la règle 278 : --fusee --vue-unique --classe=pompe (tools/cadence_cloud/prise.sh, SECONDES=45, PHYSIQUE=8)",
+ "rendu": "Xvfb + llvmpipe (gl_compatibility), relatif seulement",
+ "A": "--sans-rayonnement --sans-poussiere (le rendu de RR3)",
+ "B": "le jeu (le rayonnement des sources vives, la poussière dans le faisceau)",
+ "refusees": [
+  "rang 1, premier essai : porte — des processus git étrangers à 24-28 % d'un cœur (une recherche en lecture seule lancée en parallèle) ; refaite, valide"
+ ],
+ "prises": [
+  {
+   "rang": 1,
+   "etiquette": "A",
+   "essai": "r2",
+   "valide": true,
+   "mediane_ms": 273.0,
+   "moyenne_ms": 273.1,
+   "un_pour_cent_bas_ms": 332.9,
+   "images": 165
+  },
+  {
+   "rang": 2,
+   "etiquette": "B",
+   "essai": "r1",
+   "valide": true,
+   "mediane_ms": 260.4,
+   "moyenne_ms": 262.4,
+   "un_pour_cent_bas_ms": 331.5,
+   "images": 172
+  },
+  {
+   "rang": 3,
+   "etiquette": "B",
+   "essai": "r1",
+   "valide": true,
+   "mediane_ms": 262.9,
+   "moyenne_ms": 267.1,
+   "un_pour_cent_bas_ms": 336.3,
+   "images": 169
+  },
+  {
+   "rang": 4,
+   "etiquette": "A",
+   "essai": "r1",
+   "valide": true,
+   "mediane_ms": 264.2,
+   "moyenne_ms": 271.4,
+   "un_pour_cent_bas_ms": 464.1,
+   "images": 166
+  },
+  {
+   "rang": 5,
+   "etiquette": "A",
+   "essai": "r1",
+   "valide": true,
+   "mediane_ms": 262.5,
+   "moyenne_ms": 266.9,
+   "un_pour_cent_bas_ms": 501.9,
+   "images": 169
+  },
+  {
+   "rang": 6,
+   "etiquette": "B",
+   "essai": "r1",
+   "valide": true,
+   "mediane_ms": 262.9,
+   "moyenne_ms": 261.0,
+   "un_pour_cent_bas_ms": 329.6,
+   "images": 173
+  },
+  {
+   "rang": 7,
+   "etiquette": "B",
+   "essai": "r1",
+   "valide": true,
+   "mediane_ms": 250.0,
+   "moyenne_ms": 255.5,
+   "un_pour_cent_bas_ms": 344.3,
+   "images": 177
+  },
+  {
+   "rang": 8,
+   "etiquette": "A",
+   "essai": "r1",
+   "valide": true,
+   "mediane_ms": 254.7,
+   "moyenne_ms": 260.6,
+   "un_pour_cent_bas_ms": 332.6,
+   "images": 173
+  }
+ ],
+ "verdict": {
+  "moyenne_A_ms": 268.0,
+  "moyenne_B_ms": 261.5,
+  "cadence_B_sur_A": 1.025,
+  "delta_ms": -6.5,
+  "erreur_type_A_ms": 2.8,
+  "erreur_type_B_ms": 2.4,
+  "regle": "cadence ≥ 0,970 : tenue",
+  "lecture": "B plus rapide que A ne peut pas venir d'un coût ajouté : c'est le bruit (1,8 erreur type). La série dit que le coût n'est pas mesurable sous llvmpipe."
+ }
+}

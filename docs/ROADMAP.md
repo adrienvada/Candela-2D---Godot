@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-06 (RR3 — l'encre devient l'exception (`--avec-encre`), et la lueur des LED au pied des murs dit où ils sont (Q90 = (b)) : loin de toute lumière vive, 38 278 pixels allumés au plan « torche » contre 29 528 avec le trait ; un facteur sur la part de la bande, jamais un terme ; cadence 0,992 ; Q91 posée, la vignette ; la poussière dans les faisceaux passe à RR4 ; RR2 — la lumière peinte : une courbe de tons sur le sol, les murs et la fumée — le cœur des flaques et des cônes relevé, rien sous son pied, cadence 0,989 au duel ; trouvé en chemin, la « valeur affichée » d'`iso_pate` est la lumière linéaire (le relevé d'ISO7 était le point noir de la sortie 3D) — signalé ; Q90 tranchée, (b), et le chantier RR lancé jusqu'à RR5 ; RR1 — Q83 tranchée, « brute, sans paliers » : la pâte brute devient le défaut en jeu, les menus ne changent pas ; l'essai sans encre (`--sans-encre`) ; le chantier RR inscrit — un rendu en jeu plus réaliste, plus fluide, plus oppressant, Hadès pour référence ; OMBRES : Q89 préparée — le geste rangé en patch, la planche faite : pendant une redescente, le jeu tourne le voile et l'appareil vers l'adversaire, avec le geste vers ce qui a ébloui ; trouvé en chemin, l'appareil du brouillage ne s'allume jamais en aventure ; OM3c — les preuves de Q83 et Q85, posées par les bancs sans toucher au jeu : la pâte (b) retire 90 % du balayage des paliers en gardant le lavis, (c) le retire entier en perdant le palier du milieu ; l'atlas à 4096 retire 98 % du papillotement d'une ombre qui tourne pour un coût indiscernable du bruit, le PCF5 coûte 10 à 14 % ; trouvé en chemin, l'allumage « CANDELA » qui voilait le premier plan des planches sous llvmpipe ; OM6 close — les capteurs d'objets, mesurés au passage, coûtent moins de 0,5 % chacun ; OM6b mesuré avant, pas fait — les murs par contours ne retireraient que 5 % des arêtes d'occulteurs de la salle 8.9, au plus 2 % du temps d'image, pour le geste le plus risqué du lot ; OM6a LIVRÉ — le banc de cadence du solo, et trois gestes mesurés dans la salle 8.9 : +9 % de cadence sous llvmpipe (l'ombre d'un halo sans récepteur, le capteur d'un corps caché, la lumière de coup partie à 1 % de son énergie) ; OM2 LIVRÉ — l'ombre d'un corps a la forme de son corps voxel, l'arme ne pointe plus au sol, et les PNJ ont leur ombre de contact ; OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; l'audit d'optimisation, en lecture seule : rapport `docs/AUDIT_OPTIMISATION.md`, section « Chantier — l'audit d'optimisation », six pièges ajoutés ; la veille, SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-06 (RR4 — les lueurs : les cinq sources vives rayonnent — une troisième lueur, large et faible, une image que rien de ce que lit le jeu ne voit (capteurs et lightmap identiques à l'octet) —, et la poussière grène le faisceau sans l'éclaircir (un facteur de moyenne 1) ; le noir absolu tient, les pixels sortis du noir sont au pied d'une source vive ; cadence 1,025, le coût n'est pas mesurable ; RR3 — l'encre devient l'exception (`--avec-encre`), et la lueur des LED au pied des murs dit où ils sont (Q90 = (b)) : loin de toute lumière vive, 38 278 pixels allumés au plan « torche » contre 29 528 avec le trait ; un facteur sur la part de la bande, jamais un terme ; cadence 0,992 ; Q91 posée, la vignette ; la poussière dans les faisceaux passe à RR4 ; RR2 — la lumière peinte : une courbe de tons sur le sol, les murs et la fumée — le cœur des flaques et des cônes relevé, rien sous son pied, cadence 0,989 au duel ; trouvé en chemin, la « valeur affichée » d'`iso_pate` est la lumière linéaire (le relevé d'ISO7 était le point noir de la sortie 3D) — signalé ; Q90 tranchée, (b), et le chantier RR lancé jusqu'à RR5 ; RR1 — Q83 tranchée, « brute, sans paliers » : la pâte brute devient le défaut en jeu, les menus ne changent pas ; l'essai sans encre (`--sans-encre`) ; le chantier RR inscrit — un rendu en jeu plus réaliste, plus fluide, plus oppressant, Hadès pour référence ; OMBRES : Q89 préparée — le geste rangé en patch, la planche faite : pendant une redescente, le jeu tourne le voile et l'appareil vers l'adversaire, avec le geste vers ce qui a ébloui ; trouvé en chemin, l'appareil du brouillage ne s'allume jamais en aventure ; OM3c — les preuves de Q83 et Q85, posées par les bancs sans toucher au jeu : la pâte (b) retire 90 % du balayage des paliers en gardant le lavis, (c) le retire entier en perdant le palier du milieu ; l'atlas à 4096 retire 98 % du papillotement d'une ombre qui tourne pour un coût indiscernable du bruit, le PCF5 coûte 10 à 14 % ; trouvé en chemin, l'allumage « CANDELA » qui voilait le premier plan des planches sous llvmpipe ; OM6 close — les capteurs d'objets, mesurés au passage, coûtent moins de 0,5 % chacun ; OM6b mesuré avant, pas fait — les murs par contours ne retireraient que 5 % des arêtes d'occulteurs de la salle 8.9, au plus 2 % du temps d'image, pour le geste le plus risqué du lot ; OM6a LIVRÉ — le banc de cadence du solo, et trois gestes mesurés dans la salle 8.9 : +9 % de cadence sous llvmpipe (l'ombre d'un halo sans récepteur, le capteur d'un corps caché, la lumière de coup partie à 1 % de son énergie) ; OM2 LIVRÉ — l'ombre d'un corps a la forme de son corps voxel, l'arme ne pointe plus au sol, et les PNJ ont leur ombre de contact ; OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; l'audit d'optimisation, en lecture seule : rapport `docs/AUDIT_OPTIMISATION.md`, section « Chantier — l'audit d'optimisation », six pièges ajoutés ; la veille, SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -35803,7 +35803,7 @@ sans encre dira si on le garde.
 | **RR1** | Q83 en jeu (la pâte brute par défaut) ; l'essai sans encre (`--sans-encre`) ; la planche des trois rendus | ✅ **FAITE le 2026-10-05** — voir plus bas |
 | **RR2** | La lumière peinte : une courbe de tons continue — le cœur qui blanchit, la pénombre qui vire à l'ambre —, la couleur ; multiplicative | ✅ **FAITE le 2026-10-05** — voir plus bas |
 | **RR3** | L'oppression : l'encre en exception et la lueur des LED au pied des murs (Q90 = (b)) ; les bords qui s'enfoncent (→ Q91) ; le contraste (fait par RR2) ; la portée de la torche (une règle de jeu : non) | ✅ **FAITE le 2026-10-06** — voir plus bas |
-| **RR4** | Les lueurs : les sources qui rayonnent (flash, fusée, braises, LED), et la poussière dans les faisceaux (venue de RR3 : la lumière dans l'air), au banc de cadence, noir absolu vérifié | proposée |
+| **RR4** | Les lueurs : les sources qui rayonnent (flash, fusée, braises, LED), et la poussière dans les faisceaux (venue de RR3 : la lumière dans l'air), au banc de cadence, noir absolu vérifié | ✅ **FAITE le 2026-10-06** — voir plus bas (les braises et les LED : non, et pourquoi) |
 | **RR5** | Les effets en jeu — sang, impacts, flash de mort, traçante — du palier au fondu (rouvre, en jeu seulement, la règle d'encrage de la refonte) | proposée |
 
 « Plus fluide » tient aussi à Q85 (OMBRES) : l'atlas d'ombres à 4096 retire 98 % du papillotement d'une ombre qui tourne.
@@ -36050,6 +36050,72 @@ des dégâts reste seule à parler de santé ; (c) une vignette d'écran classiq
 bords). **Avis : (a)** — le jeu est déjà le plus oppressant de ce que montre Hadès : un écran noir où la lumière seule dit
 quelque chose ; une vignette n'y ajouterait qu'un second sens au bord de l'écran, celui de la santé.
 
+### RR4 — FAITE le 2026-10-06 : les lueurs — les sources vives rayonnent, la poussière se voit dans le faisceau
+
+**Le rayonnement des sources vives.** Hadès fait rayonner ses sources au-delà de leur forme ; ici, les cinq sources qui avaient
+déjà un point franc et un halo doux — la comète de la fusée, l'éclair de la mine, le luminaire du plafonnier, l'éclat de bouche,
+la lentille d'une torche tenue — gagnent une troisième lueur, large et faible (`IsoVolumes._poser_rayonnement`) : trois fois le
+diamètre de leur halo doux (`RAYONNEMENT_TAILLE`), à la moitié de son intensité (`RAYONNEMENT_INTENSITE` ; 0,3, le premier
+réglage, ne se voyait pas sur la planche), même lieu, même couleur, même décroissance douce. Une IMAGE, comme les deux autres :
+elle ne verse aucune lumière — ni lightmap, ni corps, ni capteur, ni bot —, son intensité est celle de SA source (source éteinte,
+rayonnement éteint), un mur 3D devant la source la cache (la profondeur), et la lentille d'une torche le pèse par l'orientation
+de son verre. `--sans-rayonnement` l'éteint.
+
+**La poussière dans le faisceau** (venue de RR3). Des grains rares et vifs dérivent lentement dans le rayon de la torche
+(`poussiere_du_faisceau`, `volume_iso.gdshader`, sous `FAISCEAU_LUMINEUX` ; force `IsoVolumes.POUSSIERE` = 0,7) : un facteur sur
+l'opacité du rayon dans l'air, de MOYENNE 1 — le faisceau se grène, il ne s'éclaircit pas —, nul hors du rayon (il n'existe
+que là), ancré dans le monde et poussé par le temps (6 px de monde par seconde). Le premier réglage, un grain doux (9 % des
+cellules, ×2,2 au plus), ne changeait que ±2,6 niveaux dans le cône — le rayon dans l'air pèse peu sur le sol qu'il éclaire — :
+invisible. Le réglage livré : 3,45 % des cellules, ×5,2 au plus à pleine force. Visuel seulement : le rayon dans l'air n'est lu
+par rien (ni l'éblouissement, ni les capteurs, ni le bot). `--sans-poussiere` l'éteint.
+
+**Les planches** (`docs/iso/rr/rr4/`, deux colonnes par plan — RR3 (`--sans-rayonnement --sans-poussiere`) et RR4 ; photographe
+1280×720, banc des ombres 1920×1080, llvmpipe) :
+- **Le rayonnement se voit autour des sources vives, et là seulement.** L'éclat de bouche (plan « flash-de-tir » : 41 604
+  pixels changent de plus de 8 niveaux, le 1 % le plus clair des pixels allumés passe de 179,6 à 197,4), les luminaires des
+  plafonniers (salle 0.9 : 35 522 pixels, la luma moyenne des pixels allumés 26,9 → 28,3 ; « plafonnier » : 13 094), la fusée
+  (1 615). À la loupe, où seule la lentille de la torche rayonne : 275 à 323 pixels.
+- **Le noir absolu tient.** Au banc des ombres (pas fixe), les pixels sortis du noir — à 8/255 au plus avant, au-dessus après —
+  sont 246 (plafonnier), 3 197 (salle 0.9) et 1 585 (brouillage) sur deux millions ; 95 %, 99,8 % et 100 % d'entre eux à moins
+  de 100 px d'une source vive (luma au-dessus de 150), à une luma moyenne de 9,5 à 12,5 : le pied du rayonnement, autour de sa
+  source. Les autres (13, 6, 0) sont moins nombreux que les pixels rentrés dans le noir d'une prise à l'autre (140, 96, 31) : le
+  bruit du banc (`noir_rr4.json`).
+- **Rien de ce que lit le jeu ne bouge.** Au même banc, les capteurs (256×256) et la lightmap 2D des PNJ (600×600), relus
+  octet par octet avant et après : **identiques**, sur les trois plans (`faisceau_et_lightmap_rr4.json`). Le rayonnement et la
+  poussière sont des images.
+- **La poussière grène le faisceau sans l'éclaircir.** Les grains — pixels allumés qui dépassent de plus de 6 niveaux la médiane
+  de leur voisinage 7×7 — : « volume » 4 182 → 4 586, « rétrodiffusion » (deux faisceaux) 4 169 → 5 519, « sang » 3 453 →
+  4 499 ; la luma moyenne des pixels allumés ne bouge pas (50,00 → 50,05 ; 47,83 → 47,82 ; 45,58 → 45,68). Sur une image fixe
+  et réduite, elle se devine à peine : c'est un mouvement, des grains qui dérivent, et c'est en jeu qu'elle se juge (H17).
+
+**Cadence** (la règle des 3 %, `tools/cadence_cloud`, le duel de la règle 278 — la fusée allumée, donc sa comète qui rayonne, et la
+torche, donc la poussière —, huit prises en miroir, toutes valides ; la première refaite : la porte avait refusé un essai
+pendant lequel une recherche en lecture seule faisait tourner `git` à 24-28 % d'un cœur ; A = `--sans-rayonnement
+--sans-poussiere`, B = le jeu) : A 268,0 ms, B 261,5 ms — **cadence 1,025**. B plus rapide ne peut pas venir d'un coût
+ajouté : c'est le bruit (6,5 ms pour des erreurs types de 2,8 et 2,4 ms). Ce que la série dit : le coût du rayonnement (un
+quad de plus par source vive) et de la poussière (une lecture de bruit par fragment du rayon) n'est pas mesurable sous
+llvmpipe, et la règle est tenue. Chaque prise : `docs/iso/rr/rr4/cadence_rr4.json`.
+
+**Les gardes** : `tools/test_rendu_rr.gd` passe de 62 à 77 vérifications et se joue six fois (`--sans-rayonnement --sans-poussiere`
+en plus) : les cinq sources posent trois lueurs, et le rayonnement part EXACTEMENT de leur halo doux (même lieu, même taille et
+même intensité de départ — donc de leur source) ; posé pour de vrai sur un `IsoVolumes` (taille, intensité, forme, éteint sans
+rayonnement) ; la poussière au rayon seulement, après sa longueur, une fois ; sa MOYENNE calculée sur le bruit même
+(`IsoPate._bruit`, 20 000 points : 0,998 à pleine force), son creux (0,85) et ses grains (5,19 au plus).
+`test_plafonniers` et `test_point_lumineux` comptent trois lueurs au lieu de deux. **Quatorze sabotages, chacun rouge puis restauré
+(md5)** (`docs/iso/rr/rr4/sabotages_rr4.json`) : Y1 un rayonnement pas plus large que son halo ; Y2 aussi fort que lui ; Y3
+`--sans-rayonnement` ignoré ; Y4 l'éclat de bouche oublie son rayonnement ; Y5 le rayonnement de l'éclat part d'une autre
+intensité que son halo (la source oubliée) ; Y6 le rayonnement posé même éteint ; Y7 le plafonnier perd son rayonnement (rouge
+aussi dans `test_plafonniers`) ; Y8 la lentille d'une torche le perd (rouge dans `test_point_lumineux`, pour J1 et pour J2) ;
+P1 la poussière éclaircit le faisceau (gain doublé : facteur moyen 1,146) ; P2 elle l'éteint entre ses grains, moyenne gardée
+(au plus creux 0,40) ; P3 posée hors du rayon ; P4 les couches du rayon ne reçoivent pas la force ; P5 le facteur lit le bruit
+même sans force ; P6 `--sans-poussiere` ignoré.
+
+**Suite entière** : 197 suites vertes, aucune rouge, sans erreur de script (23 min 37 s).
+
+**Ce qui n'est pas fait, et pourquoi** : les braises (des dizaines de points par nappe : un rayonnement par point coûterait autant
+de quads, pour un effet que leur lueur au sol porte déjà) ; la lentille de la torche fantôme et le cœur de la lampe, des points
+seuls sans halo doux de départ ; les LED, dont la lueur au pied des murs (RR3) est déjà le rayonnement.
+
 #### Jalon H17 — ce qui attend Adrien
 
 RR1 est dans `main` depuis la fusion de la PR 8 ; les étapes suivantes arrivent sur la même branche de chantier, une PR par
@@ -36065,3 +36131,6 @@ lot.
 4. RR3 : le jeu montre la lueur des LED au pied des murs, sans encre ; `-- --avec-encre` remet l'encre et le trait des murs (le
    rendu de RR2), `-- --sans-lueur-led` n'a ni l'un ni l'autre. Dire : la lueur dit-elle assez où sont les murs, sans en dire
    trop (un corps posté devant une face allumée s'y découpe) ? Q91 — des bords d'écran qui s'enfoncent ?
+5. RR4 : les sources vives rayonnent — l'éclat de bouche, la fusée, la mine, les plafonniers, la lentille d'une torche —, et des
+   grains de poussière dérivent dans le faisceau ; `-- --sans-rayonnement` et `-- --sans-poussiere` les retirent. Dire : le
+   rayonnement est-il assez large, ou trop ; la poussière se voit-elle en mouvement, sans distraire du faisceau ?

@@ -626,6 +626,8 @@ run test_rendu_rr_avec_encre --script "res://tools/test_rendu_rr.gd" -- --avec-e
 run test_rendu_rr_sans_encre --script "res://tools/test_rendu_rr.gd" -- --sans-encre --encre-essai
 run test_rendu_rr_sans_courbe --script "res://tools/test_rendu_rr.gd" -- --sans-courbe
 run test_rendu_rr_sans_lueur --script "res://tools/test_rendu_rr.gd" -- --sans-lueur-led
+# RR4 — les lueurs éteintes, lues au lancement : ni rayonnement autour des sources vives, ni poussière dans le faisceau.
+run test_rendu_rr_sans_lueurs --script "res://tools/test_rendu_rr.gd" -- --sans-rayonnement --sans-poussiere
 run test_iso_beaute_avec_encre --script "res://tools/test_iso_beaute.gd" -- --avec-encre
 run test_iso_objets_avec_encre --script "res://tools/test_iso_objets.gd" -- --avec-encre
 run test_fumee_voxel_avec_encre --script "res://tools/test_fumee_voxel.gd" -- --avec-encre

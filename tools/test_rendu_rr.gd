@@ -17,14 +17,20 @@
 ## luminance de l'OCTET (posée d'abord sur la valeur décodée, la courbe ne touchait presque rien — l'algèbre seule ne l'aurait
 ## pas vu, une garde nommée le voit), l'accord du shader et du miroir, et la force posée par les matériaux du jeu.
 ##
+## Étape RR4 — **les lueurs** : le RAYONNEMENT des cinq sources vives (une troisième lueur, large et faible, à la place, à la taille
+## et à l'intensité de départ de leur halo doux ; `IsoVolumes._poser_rayonnement`, `--sans-rayonnement`) et la POUSSIÈRE dans le
+## faisceau (`poussiere_du_faisceau`, `volume_iso.gdshader` ; `--sans-poussiere`) — un facteur de MOYENNE 1, calculée ici sur le
+## bruit même : le rayon se grène sans s'éclaircir.
+##
 ## Étape RR3 — **l'encre devient l'exception** (Q90 = (b) : sans drapeau, aucune encre ; `--avec-encre` la remet, et le trait
 ## des murs avec elle ; `--sans-encre` l'emporte toujours) et **la lueur des LED au pied des murs** la remplace (`lumiere_des_led`,
 ## `IsoMateriaux.lueur_led`, `Presentation3D._accorder_la_lueur_led`) : posée par le matériau du jeu, nulle sous l'encre ou
 ## `--sans-lueur-led`, la même fonction dans le mur et le mur éclairé, la couleur de la bande relue à chaque image.
 ##
-## Jouée cinq fois par `run_suites.sh` : sans drapeau (`test_rendu_rr`), `test_rendu_rr_avec_encre` (`--avec-encre`),
+## Jouée six fois par `run_suites.sh` : sans drapeau (`test_rendu_rr`), `test_rendu_rr_avec_encre` (`--avec-encre`),
 ## `test_rendu_rr_sans_encre` (`--sans-encre --encre-essai` : le retrait doit l'emporter), `test_rendu_rr_sans_courbe`
-## (`--sans-courbe`), `test_rendu_rr_sans_lueur` (`--sans-lueur-led`).
+## (`--sans-courbe`), `test_rendu_rr_sans_lueur` (`--sans-lueur-led`), `test_rendu_rr_sans_lueurs` (`--sans-rayonnement
+## --sans-poussiere`).
 ## Lancer : godot --headless --path . --script res://tools/test_rendu_rr.gd [-- --avec-encre | --sans-encre | --sans-courbe | --sans-lueur-led]
 extends SceneTree
 
@@ -67,6 +73,8 @@ func _run() -> void:
 	_la_courbe_des_materiaux(sans_courbe)
 	_la_lueur_des_led_dans_les_shaders()
 	_la_lueur_des_led_posee()
+	_le_rayonnement()
+	_la_poussiere()
 	print("%d vérifications, %d échec(s)" % [_verifications, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -448,3 +456,115 @@ func _fonction(texte: String, signature: String) -> String:
 		return ""
 	var fin := texte.find("\n\n", i)
 	return texte.substr(i, (fin if fin >= 0 else texte.length()) - i)
+
+
+# ---------------------------------------------------------------------------
+# RR4 — LES LUEURS : LE RAYONNEMENT DES SOURCES VIVES, LA POUSSIÈRE DANS LE FAISCEAU
+# ---------------------------------------------------------------------------
+
+const SOURCES_QUI_RAYONNENT := ["_suivre_comete", "_suivre_eclair", "_suivre_plafonniers", "_suivre_eclats",
+	"_suivre_lentilles_des_joueurs"]
+
+
+## Le texte d'une fonction GDScript : de `func <nom>(` à la fonction suivante (une ligne vide n'y met pas fin).
+func _fonction_gd(texte: String, nom: String) -> String:
+	var i := texte.find("func %s(" % nom)
+	if i < 0:
+		return ""
+	var fin := texte.find("\nfunc ", i + 1)
+	return texte.substr(i, (fin if fin >= 0 else texte.length()) - i)
+
+
+func _le_rayonnement() -> void:
+	print("— RR4 : le rayonnement des sources vives")
+	var sans := DrapeauxDeLancement.present(IsoVolumes.DRAPEAU_SANS_RAYONNEMENT)
+	_check("un rayonnement est plus large que son halo et plus faible que lui (%.1f fois le diamètre, %.2f fois l'intensité)" % [
+		IsoVolumes.RAYONNEMENT_TAILLE, IsoVolumes.RAYONNEMENT_INTENSITE], IsoVolumes.RAYONNEMENT_TAILLE > 1.0
+		and IsoVolumes.RAYONNEMENT_INTENSITE > 0.0 and IsoVolumes.RAYONNEMENT_INTENSITE < 1.0)
+	_check("%s : le rayonnement %s" % ["--sans-rayonnement" if sans else "le jeu", "éteint" if sans else "allumé"],
+		IsoVolumes.rayonnement_actif() == (not sans and IsoMateriaux.beaute_active()))
+	# Chaque source vive : trois lueurs, et le rayonnement part EXACTEMENT de son halo doux — même lieu, même taille et même
+	# intensité de départ —, donc de sa source : source éteinte, rayonnement éteint (le noir absolu).
+	var source := FileAccess.get_file_as_string("res://iso_volumes.gd")
+	for nom: String in SOURCES_QUI_RAYONNENT:
+		var f := _fonction_gd(source, nom)
+		var i := f.find("_poser_rayonnement(e, 2, ")
+		var args := f.substr(i + "_poser_rayonnement(e, 2, ".length(), f.find(")\n", i) - i - "_poser_rayonnement(e, 2, ".length()) \
+			if i >= 0 else "?"
+		_check("%s : trois lueurs, le rayonnement sur le halo doux (%s)" % [nom, args],
+			f.contains("_halos(e, 3)") and f.count("_poser_rayonnement(") == 1
+			and (f.contains("_poser_halo(e, 0, %s, 0)" % args) or f.contains("_poser_halo(e, 1, %s, 0)" % args)))
+	# Pour de vrai, sur un `IsoVolumes` : la troisième lueur, sa taille, son intensité, sa forme douce — éteinte sans rayonnement.
+	var v := IsoVolumes.new()
+	var e := {"noeuds": [], "mats": []}
+	v.call("_halos", e, 3)
+	v.call("_poser_rayonnement", e, 2, Vector3(1.0, 2.0, 3.0), 30.0, Color(1.0, 0.8, 0.5), 0.8)
+	var mi: MeshInstance3D = e["noeuds"][2]
+	var mat: ShaderMaterial = e["mats"][2]
+	var actif := IsoVolumes.rayonnement_actif()
+	var attendue := 0.8 * IsoVolumes.RAYONNEMENT_INTENSITE if actif else 0.0
+	_check("posé pour de vrai : %.0f px, intensité %.2f, forme douce, %s" % [30.0 * IsoVolumes.RAYONNEMENT_TAILLE, attendue,
+		"visible" if actif else "caché"], is_equal_approx(mi.scale.x, 30.0 * IsoVolumes.RAYONNEMENT_TAILLE)
+		and is_equal_approx(_reglage(mat, "intensite"), attendue) and int(mat.get_shader_parameter("forme")) == 0
+		and mi.visible == actif and mi.position.is_equal_approx(Vector3(1.0, 2.0, 3.0)))
+	v.free()
+
+
+func _la_poussiere() -> void:
+	print("— RR4 : la poussière dans le faisceau")
+	var sans := DrapeauxDeLancement.present(IsoVolumes.DRAPEAU_SANS_POUSSIERE)
+	_check("la force du jeu est une vraie force, dans ]0, 1] (%.2f)" % IsoVolumes.POUSSIERE,
+		IsoVolumes.POUSSIERE > 0.0 and IsoVolumes.POUSSIERE <= 1.0)
+	_check("%s : la poussière %s" % ["--sans-poussiere" if sans else "le jeu", "éteinte" if sans else "posée"],
+		is_equal_approx(IsoVolumes.poussiere_du_faisceau(), 0.0 if sans or not IsoMateriaux.beaute_active() else IsoVolumes.POUSSIERE))
+	_check("chaque couche du rayon reçoit la force (`_poser_longueur`)",
+		_fonction_gd(FileAccess.get_file_as_string("res://iso_volumes.gd"), "_poser_longueur").contains(
+			"mat.set_shader_parameter(\"poussiere_faisceau\", poussiere_du_faisceau())"))
+	var sh := FileAccess.get_file_as_string("res://volume_iso.gdshader")
+	var i_def := sh.find("#ifdef FAISCEAU_LUMINEUX\n// Chantier RR, RR4 — le facteur de la poussière")
+	var i_appel := sh.find("a *= poussiere_du_faisceau(px, px_ecran);")
+	var i_coupe := sh.find("a *= 1.0 - smoothstep(longueur_air * (1.0 - fondu_air), longueur_air, length(px - nuage_centre));")
+	_check("le shader : la poussière au rayon seulement (`FAISCEAU_LUMINEUX`), après sa longueur, une fois",
+		sh.contains("uniform float poussiere_faisceau") and i_def > 0 and i_coupe > 0 and i_appel > i_coupe
+		and sh.count("a *= poussiere_du_faisceau(") == 1 and sh.rfind("#ifdef FAISCEAU_LUMINEUX", i_appel) > i_def
+		and sh.find("#endif", i_appel) < sh.find("a = clamp(a, 0.0, 1.0);", i_appel))
+	var f := _fonction(sh, "float poussiere_du_faisceau(vec2 px, float px_ecran) {")
+	_check("sans force, le facteur vaut 1 avant toute lecture (le rayon de Q41, lisse)",
+		f.find("if (poussiere_faisceau <= 0.0) {\n\t\treturn 1.0;\n\t}") > 0 and f.find("return 1.0;") < f.find("pate_bruit("))
+	# LA MOYENNE : le facteur, sur le bruit même (`IsoPate._bruit`, le miroir de `pate_bruit`), à la force 1 — le faisceau se grène,
+	# il ne s'éclaircit pas. Les constantes sont lues dans le shader : un réglage qui y changerait se mesure ici.
+	var seuils := _vec2_du_shader(sh, "POUSSIERE_SEUILS")
+	var creux := _flottant_du_shader(sh, "POUSSIERE_CREUX")
+	var gain := _flottant_du_shader(sh, "POUSSIERE_GAIN")
+	var somme := 0.0
+	var mini := 1e9
+	var maxi := -1e9
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20261006
+	var n := 20000
+	for k in n:
+		var g := IsoPate._bruit(Vector2(rng.randf_range(0.0, 400.0), rng.randf_range(0.0, 400.0)))
+		var fac := 1.0 - creux + smoothstep(seuils.x, seuils.y, g) * gain
+		somme += fac
+		mini = minf(mini, fac)
+		maxi = maxf(maxi, fac)
+	var moyenne := somme / float(n)
+	_check("en moyenne, le faisceau ne s'éclaircit pas : facteur moyen %.3f à pleine force (1 ± 0,03)" % moyenne,
+		absf(moyenne - 1.0) <= 0.03)
+	_check("il ne s'éteint nulle part (au plus creux %.2f) et ses grains se voient sans éblouir (au plus %.2f)" % [mini, maxi],
+		mini >= 0.8 and maxi <= 6.0 and maxi > 2.0)
+
+
+func _flottant_du_shader(sh: String, nom: String) -> float:
+	var cle := "const float %s = " % nom
+	var i := sh.find(cle)
+	return sh.substr(i + cle.length(), sh.find(";", i) - i - cle.length()).to_float() if i >= 0 else NAN
+
+
+func _vec2_du_shader(sh: String, nom: String) -> Vector2:
+	var cle := "const vec2 %s = vec2(" % nom
+	var i := sh.find(cle)
+	if i < 0:
+		return Vector2(NAN, NAN)
+	var parts := sh.substr(i + cle.length(), sh.find(")", i) - i - cle.length()).split(",")
+	return Vector2(parts[0].to_float(), parts[1].to_float())

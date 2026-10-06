@@ -1,0 +1,235 @@
+{
+ "identite_2d": {
+  "brouillage-torche_capteur.png": {
+   "pixels_differents": 0,
+   "ecart_max": 0,
+   "taille": [
+    256,
+    256
+   ]
+  },
+  "brouillage-torche_pnj_lightmap.png": {
+   "pixels_differents": 0,
+   "ecart_max": 0,
+   "taille": [
+    600,
+    600
+   ]
+  },
+  "lumieres-salle09_capteur.png": {
+   "pixels_differents": 0,
+   "ecart_max": 0,
+   "taille": [
+    256,
+    256
+   ]
+  },
+  "lumieres-salle09_pnj_lightmap.png": {
+   "pixels_differents": 0,
+   "ecart_max": 0,
+   "taille": [
+    600,
+    600
+   ]
+  },
+  "plafonnier-brute_capteur.png": {
+   "pixels_differents": 0,
+   "ecart_max": 0,
+   "taille": [
+    256,
+    256
+   ]
+  },
+  "plafonnier-brute_pnj_lightmap.png": {
+   "pixels_differents": 0,
+   "ecart_max": 0,
+   "taille": [
+    600,
+    600
+   ]
+  }
+ },
+ "faisceau": {
+  "01-duel": {
+   "p_avant": {
+    "taille": [
+     1280,
+     720
+    ],
+    "allumes_au_dessus_de_20": 27204,
+    "grains": 2802,
+    "luma_moyenne_allumee": 48.52
+   },
+   "p_apres": {
+    "taille": [
+     1280,
+     720
+    ],
+    "allumes_au_dessus_de_20": 27182,
+    "grains": 2823,
+    "luma_moyenne_allumee": 48.47
+   }
+  },
+  "02-torche": {
+   "p_avant": {
+    "taille": [
+     1280,
+     720
+    ],
+    "allumes_au_dessus_de_20": 20380,
+    "grains": 2289,
+    "luma_moyenne_allumee": 47.93
+   },
+   "p_apres": {
+    "taille": [
+     1280,
+     720
+    ],
+    "allumes_au_dessus_de_20": 20384,
+    "grains": 2331,
+    "luma_moyenne_allumee": 47.77
+   }
+  },
+  "03-volume": {
+   "p_avant": {
+    "taille": [
+     1280,
+     720
+    ],
+    "allumes_au_dessus_de_20": 49174,
+    "grains": 4182,
+    "luma_moyenne_allumee": 50.0
+   },
+   "p_apres": {
+    "taille": [
+     1280,
+     720
+    ],
+    "allumes_au_dessus_de_20": 49334,
+    "grains": 4586,
+    "luma_moyenne_allumee": 50.05
+   }
+  },
+  "04-retrodiffusion": {
+   "p_avant": {
+    "taille": [
+     1280,
+     720
+    ],
+    "allumes_au_dessus_de_20": 70755,
+    "grains": 4169,
+    "luma_moyenne_allumee": 47.83
+   },
+   "p_apres": {
+    "taille": [
+     1280,
+     720
+    ],
+    "allumes_au_dessus_de_20": 70807,
+    "grains": 5519,
+    "luma_moyenne_allumee": 47.82
+   }
+  },
+  "06-sang": {
+   "p_avant": {
+    "taille": [
+     1280,
+     720
+    ],
+    "allumes_au_dessus_de_20": 43643,
+    "grains": 3453,
+    "luma_moyenne_allumee": 45.58
+   },
+   "p_apres": {
+    "taille": [
+     1280,
+     720
+    ],
+    "allumes_au_dessus_de_20": 43770,
+    "grains": 4499,
+    "luma_moyenne_allumee": 45.68
+   }
+  },
+  "07-impacts": {
+   "p_avant": {
+    "taille": [
+     1280,
+     720
+    ],
+    "allumes_au_dessus_de_20": 33952,
+    "grains": 3178,
+    "luma_moyenne_allumee": 44.41
+   },
+   "p_apres": {
+    "taille": [
+     1280,
+     720
+    ],
+    "allumes_au_dessus_de_20": 35160,
+    "grains": 3322,
+    "luma_moyenne_allumee": 44.7
+   }
+  },
+  "01-plafonnier-brute": {
+   "p_avant": {
+    "taille": [
+     1920,
+     1080
+    ],
+    "allumes_au_dessus_de_20": 118028,
+    "grains": 13592,
+    "luma_moyenne_allumee": 63.36
+   },
+   "p_apres": {
+    "taille": [
+     1920,
+     1080
+    ],
+    "allumes_au_dessus_de_20": 118391,
+    "grains": 17072,
+    "luma_moyenne_allumee": 64.98
+   }
+  },
+  "02-lumieres-salle09": {
+   "p_avant": {
+    "taille": [
+     1920,
+     1080
+    ],
+    "allumes_au_dessus_de_20": 194656,
+    "grains": 15577,
+    "luma_moyenne_allumee": 44.21
+   },
+   "p_apres": {
+    "taille": [
+     1920,
+     1080
+    ],
+    "allumes_au_dessus_de_20": 201823,
+    "grains": 18807,
+    "luma_moyenne_allumee": 46.41
+   }
+  },
+  "03-brouillage-torche": {
+   "p_avant": {
+    "taille": [
+     1920,
+     1080
+    ],
+    "allumes_au_dessus_de_20": 196085,
+    "grains": 12330,
+    "luma_moyenne_allumee": 39.16
+   },
+   "p_apres": {
+    "taille": [
+     1920,
+     1080
+    ],
+    "allumes_au_dessus_de_20": 201759,
+    "grains": 13448,
+    "luma_moyenne_allumee": 40.68
+   }
+  }
+ },
+ "methode": "identite_2d : capteurs et lightmap du banc des ombres (pas fixe), avant/après, octet par octet. faisceau : pixels allumés (luma > 20) qui dépassent de plus de 6 niveaux la médiane 7×7 de leur voisinage — les grains ; et la luma moyenne des pixels allumés, que la poussière (de moyenne 1) ne doit pas monter."
+}
