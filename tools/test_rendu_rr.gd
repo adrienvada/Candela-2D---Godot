@@ -592,6 +592,8 @@ func _masques_fondus() -> PackedStringArray:
 		l.append("decals/impact_%d.png" % n)
 	l.append("decals/tracante.png")
 	l.append("halo/trainee.png")
+	# Chantier TIR (2026-10-05) : l'aiguille de la balle, qui remplace la traînée ronde dans `bullet.gd`.
+	l.append("decals/aiguille.png")
 	return l
 
 
@@ -695,8 +697,10 @@ func _les_effets_fondus() -> void:
 		hors_jeu.is_empty() and vus.size() >= 8, ", ".join(hors_jeu))
 	# La traçante et sa traînée.
 	var source_balle := FileAccess.get_file_as_string("res://bullet.gd")
-	_check("la traçante et sa traînée passent par le masque d'effet",
-		source_balle.contains("LightTextures.masque(IsoMateriaux.masque_d_effet(LightTextures.TRAINEE))")
+	# Chantier TIR (2026-10-05) — la traînée ronde (`TRAINEE`) n'est plus dessinée : l'aiguille l'a remplacée, et passe par le
+	# même masque d'effet. Sa garde lit donc l'aiguille.
+	_check("la traçante et l'aiguille passent par le masque d'effet",
+		source_balle.contains("LightTextures.masque(IsoMateriaux.masque_d_effet(CHEMIN_AIGUILLE))")
 		and source_balle.contains("LightTextures.masque(IsoMateriaux.masque_d_effet(\"res://assets/decals/tracante.png\"))"))
 	# Le flash de mort : fondu, la case blanche suit l'intensité ; sinon, ses trois paliers. Toujours sans lire l'écran.
 	var sh := FileAccess.get_file_as_string("res://death_flash.gdshader")

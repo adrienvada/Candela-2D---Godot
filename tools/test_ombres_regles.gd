@@ -6,7 +6,8 @@
 ##     occluder ne donne « ni ombre ni lumière mais du hasard »). Il recule comme la lampe (`Player._reculer_le_flash`), à
 ##     `RETRAIT_LAMPE` du mur ; loin des murs il reste au bout du canon. Le contrôle : à 28 px, ce flash-là tombait dans le mur.
 ##   • **O10, l'écho au sol du tir** (`ground_flash`) n'avait aucune ombre : collé à un mur, il éclairait le sol de l'autre côté.
-##     Il porte le masque des lumières neutres (`CanauxLumiere.masque_ombre_neutre_pour_les_corps`), décor compris.
+##     Il portait ensuite le masque des lumières neutres ; RETIRÉ par le chantier TIR (2026-10-05), la règle se garde sur le flash
+##     de bouche et l'étoile de bouche qui le remplacent : ombrés, les murs les coupent au sol.
 ##   • **O10, la lumière de coup** (`hit_light`) était ombrée par les murs seuls (`1`) : sa portée (`1 | 4`) touche le capteur de
 ##     SOI des deux joueurs, dont le masque ne croisait pas `1` — un corps rougissait dans sa propre vue à travers un mur. Le masque
 ##     neutre : les deux capteurs de soi en reçoivent les murs, et aucune couche de corps n'y est (le blessé ne s'ombre pas). Le
@@ -123,16 +124,18 @@ func _l_echo_et_la_lumiere_de_coup() -> void:
 	var j1: Node2D = _main.p1
 	var avant := _lumieres_enfants(j1)
 	j1.trigger_shoot_visuals()
-	var echo: PointLight2D = null
+	# Chantier TIR, étape B (2026-10-05, PR #10) — l'écho au sol est RETIRÉ : le flash de bouche éclaire lui-même, sur 800 px,
+	# et l'étoile de bouche garde la petite lumière d'encre. La règle d'O10 — « collé à un mur, la lumière du tir n'éclaire pas
+	# le sol de l'autre côté » — se garde donc sur ces deux-là : les murs les coupent (le décor est dans leur masque d'ombre).
+	var neuves := 0
 	for l in _lumieres_enfants(j1):
-		if not avant.has(l) and (l as PointLight2D).range_item_cull_mask == 1:
-			echo = l
-	_check("un tir pose son écho au sol (une lumière neuve du décor seul)", echo != null)
-	if echo != null:
-		_check("l'écho au sol a des ombres, au masque des lumières neutres (%d)" % echo.shadow_item_cull_mask,
-			echo.shadow_enabled and echo.shadow_item_cull_mask == neutre)
-		_check("donc les murs le coupent au sol (le décor reçoit ses ombres)",
-			(CanauxLumiere.DECOR & echo.shadow_item_cull_mask) != 0)
+		if not avant.has(l):
+			neuves += 1
+	_check("un tir ne pose plus d'écho au sol : aucune lumière neuve (chantier TIR)", neuves == 0, "%d" % neuves)
+	for nom in ["MuzzleFlash", "EtoileDeBouche"]:
+		var l := j1.get_node_or_null(NodePath(nom)) as PointLight2D
+		_check("%s : ombrée, et les murs la coupent au sol (le décor reçoit ses ombres)" % nom,
+			l != null and l.shadow_enabled and (CanauxLumiere.DECOR & l.shadow_item_cull_mask) != 0)
 	var j2: Node2D = _main.p2
 	var avant_j2 := _lumieres_enfants(j2)
 	j2.rpc_update_hp(float(j2.hp) - 5.0, 0, 0)

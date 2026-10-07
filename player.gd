@@ -587,6 +587,8 @@ var visual_reveal_enemy_ptr: Polygon2D
 var ambient_light: PointLight2D
 @onready var body_light = $BodyLight
 @onready var muzzle_flash = $MuzzleFlash
+## L'étoile de bouche : la petite lumière d'encre du coup (chantier TIR, étape B) — voir `_ready`.
+var etoile_de_bouche: PointLight2D
 @onready var muzzle = $Muzzle
 
 var aim_cast: RayCast2D
@@ -1026,12 +1028,34 @@ func _ready():
 		aim_line.visibility_layer = 2
 	else:
 		aim_line.visibility_layer = 4
-	# DA2.3 — trois images peintes au lieu du disque. On pose la première ici ;
-	# `trigger_shoot_visuals()` déroule les deux autres.
-	LightTextures.poser(muzzle_flash, LightTextures.FLASH[0],
+	# Chantier TIR, étape B (2026-10-05) — la lumière de bouche ÉCLAIRE : le masque `ECLAT`, posé une fois pour toutes
+	# sur 800 px. Les trois images d'encre de DA2.3 passent à l'ÉTOILE DE BOUCHE, juste en dessous.
+	#
+	# ⚠️ **`ECLAT` et pas une texture à soi, et ce n'est pas qu'une question de style.** L'atlas des textures de
+	# lumière 2D se reconstruit EN ENTIER à chaque texture inédite (audit d'optimisation, V8 « D1 ») : `ECLAT` est déjà
+	# tenue en permanence par les lumières du pool de particules, le grand flash n'y ajoute rien.
+	LightTextures.poser(muzzle_flash, LightTextures.ECLAT,
 		LightTextures.EMPREINTE_FLASH)
 	muzzle_flash.color = Charte.AMBRE
 	muzzle_flash.offset = Vector2.ZERO
+	# L'ÉTOILE DE BOUCHE : la lumière de bouche d'AVANT, inchangée — 64 px, les trois images d'encre de DA2.3, l'énergie
+	# de l'arme en descente droite. ⚠️ **Elle n'est pas un doublon, et elle a été retirée puis rendue le même jour.** En
+	# vue iso (le jeu par défaut), l'éclat DESSINÉ n'est jamais montré — `IsoVolumes._suivre_eclats` le sort des lightmaps
+	# et pose deux lueurs à l'arme : la forme d'étoile qu'on voyait au tir, c'était CETTE lumière, couchée au sol. La
+	# première version du chantier TIR l'avait remplacée par le grand flash ; les captures du 2026-10-05 ont montré
+	# l'étoile disparue (« un muzzle flash qui se VOIT », demandait Adrien). Le grand flash éclaire, l'étoile signe.
+	# Créée une fois, jamais par tir ; mêmes masques que la lumière de bouche. Ses images basculent au tir comme avant :
+	# ce coût d'atlas, que l'audit n'a pas mesuré, est celui d'aujourd'hui, ni plus ni moins.
+	etoile_de_bouche = PointLight2D.new()
+	etoile_de_bouche.name = "EtoileDeBouche"
+	etoile_de_bouche.position = muzzle_flash.position
+	etoile_de_bouche.enabled = false
+	etoile_de_bouche.shadow_enabled = true
+	etoile_de_bouche.shadow_item_cull_mask = muzzle_flash.shadow_item_cull_mask
+	etoile_de_bouche.range_item_cull_mask = muzzle_flash.range_item_cull_mask
+	etoile_de_bouche.color = Charte.AMBRE
+	LightTextures.poser(etoile_de_bouche, LightTextures.FLASH[0], LightTextures.EMPREINTE_ETOILE)
+	add_child(etoile_de_bouche)
 
 ## Pose le sprite de l'arme sur les cinq vues du joueur.
 ##
@@ -1227,7 +1251,8 @@ func accorder_les_couches_de_pnj() -> void:
 		occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE | couche_ombre_pnj()
 	var tous := CanauxLumiere.masque_des_pnj()
 	var autres := (tous & ~couche_ombre_pnj()) if est_pnj else 0
-	for lumiere in [flashlight, ambient_light, muzzle_flash]:
+	# Chantier TIR — l'étoile de bouche suit le flash de bouche : mêmes ombres, toujours.
+	for lumiere in [flashlight, ambient_light, muzzle_flash, etoile_de_bouche]:
 		if lumiere != null:
 			(lumiere as Light2D).shadow_item_cull_mask = ((lumiere as Light2D).shadow_item_cull_mask & ~tous) | autres
 
@@ -1709,7 +1734,7 @@ func poser_posture(voulue: bool) -> void:
 	# MB3a — « la torche d'un accroupi bute sur le mur » : toutes les lumières
 	# qu'il porte passent sous la hauteur d'un mur bas et en lisent les occluders
 	# pleins. Debout, elles passent par-dessus. Un seul bit, posé ou retiré.
-	for lumiere in [flashlight, body_light, ambient_light, muzzle_flash]:
+	for lumiere in [flashlight, body_light, ambient_light, muzzle_flash, etoile_de_bouche]:
 		if lumiere != null:
 			if voulue:
 				lumiere.shadow_item_cull_mask |= CanauxLumiere.COUCHE_OMBRE_MUR_BAS
@@ -1806,6 +1831,9 @@ func _reculer_le_flash() -> void:
 		if d >= 0.0:
 			place = clampf(d - RETRAIT_LAMPE, 4.0, FLASH_AVANCEE)
 	muzzle_flash.position = Vector2(place, 0.0)
+	# Chantier TIR — l'étoile de bouche recule avec lui : posée dans le mur, elle aussi donnerait des ombres au hasard.
+	if etoile_de_bouche != null:
+		etoile_de_bouche.position = muzzle_flash.position
 
 
 ## OMBRES, OM3 — l'énergie de la torche à `avance` du recul (0 au coup, 1 à sa fin) : le creux, puis la remontée en douceur.
@@ -2777,37 +2805,47 @@ func trigger_shoot_visuals():
 	var hors_suie := 1.0 - _masque_ici
 	flash_intensity *= hors_suie
 	var flash_duration = current_weapon.muzzle_flash_duration if current_weapon else 0.1
+	# Chantier TIR, étape B (2026-10-05) — **le flash ÉCLAIRE.** Adrien : « Il faudrait surtout qu'il y ait un muzzle
+	# flash qui se voit et qui éclaire » ; rayon choisi sur maquette : 400 px. La lumière de bouche faisait 64 px
+	# d'empreinte, six fois moins que la lumière de coup (400) qu'elle provoque : elle n'éclairait que le canon. Elle
+	# couvre désormais `LightTextures.EMPREINTE_FLASH` (800 px), ombres des murs comprises, et descend en
+	# `_poser_le_flash()` : blanche au coup, ambre ensuite, éteinte au bout de la durée de l'arme. Le temps d'un éclair,
+	# le tir photographie la pièce — l'adversaire proche compris : c'est ici, et pas sur la balle, que le tir révèle.
+	# L'éblouissement n'en dépend pas : `Eblouissement.pic_de_flash` a sa propre portée.
+	var pic: float = flash_intensity * PIC_DU_FLASH
+	_poser_le_flash(0.0, pic)
+	# Refonte roman graphique (lot 1, 2026-09-10) — **l'éclat DESSINÉ.** Les
+	# trois frames sont des éclats d'encre à pointes (blanc sur noir,
+	# `assets/sources/encre/`). Posées sur la seule lumière de bouche, à 64 px
+	# d'empreinte, elles restaient noyées sous l'écho au sol de V4.14 : on dessine
+	# donc l'éclat lui-même, en sprite non éclairé à la bouche du canon, orienté
+	# dans l'axe du tir. Depuis l'étape B du chantier TIR, les trois images
+	# vivent sur ce sprite et sur l'étoile de bouche ; le grand flash garde `ECLAT`.
+	#
 	# DA2.3 — la séquence se déroule PAR-DESSUS la descente d'énergie, qui reste
 	# seule maîtresse de la luminosité. Chaque image tient un tiers de la durée :
 	# à 0,1 s et 60 Hz cela fait deux images de rendu chacune, à 0,05 s
 	# (l'arbalète) une seule. **C'est le nombre que la durée permet, pas un choix
 	# esthétique** — au-delà de trois, une image ne serait jamais affichée.
-	LightTextures.poser(muzzle_flash, LightTextures.FLASH[0],
-		LightTextures.EMPREINTE_FLASH)
-	# Refonte roman graphique (lot 1, 2026-09-10) — **l'éclat DESSINÉ.** Les
-	# trois frames sont désormais des éclats d'encre à pointes (blanc sur noir,
-	# `assets/sources/encre/`). Posées sur la seule lumière de bouche, à 64 px
-	# d'empreinte, elles restaient noyées sous l'écho au sol de V4.14, trois
-	# fois plus large : le flash « de bouche » qu'on voyait à l'écran était en
-	# fait cet écho. On dessine donc l'éclat lui-même, en sprite additif non
-	# éclairé à la bouche du canon, orienté dans l'axe du tir, mêmes trois
-	# images au même tempo. **Aucune lumière ne change** — ni portée, ni
-	# masque, ni énergie : le sprite ne révèle rien que la lumière de bouche
-	# ne révèle déjà (il est posé là où elle brûle), il lui donne une forme.
 	var eclat := _eclat_de_bouche()
 	eclat.texture = LightTextures.masque(LightTextures.FLASH[0])
 	eclat.modulate = Color(Charte.HALOGENE, curseur_flash * hors_suie)
 	eclat.visible = eclat.texture != null and curseur_flash * hors_suie > 0.0
-	tw.tween_property(muzzle_flash, "energy", 0.0, flash_duration).from(flash_intensity)
+	# L'étoile de bouche : exactement la lumière de bouche d'avant le chantier TIR (voir `_ready`).
+	LightTextures.poser(etoile_de_bouche, LightTextures.FLASH[0], LightTextures.EMPREINTE_ETOILE)
+	etoile_de_bouche.enabled = true
+	tw.tween_method(_poser_le_flash.bind(pic), 0.0, 1.0, flash_duration)
+	tw.parallel().tween_property(etoile_de_bouche, "energy", 0.0, flash_duration).from(flash_intensity)
 	for i in range(1, LightTextures.FLASH.size()):
 		var chemin: String = LightTextures.FLASH[i]
 		tw.parallel().tween_callback(func():
-			LightTextures.poser(muzzle_flash, chemin, LightTextures.EMPREINTE_FLASH)
+			LightTextures.poser(etoile_de_bouche, chemin, LightTextures.EMPREINTE_ETOILE)
 			if is_instance_valid(eclat):
 				eclat.texture = LightTextures.masque(chemin)
 		).set_delay(flash_duration * float(i) / float(LightTextures.FLASH.size()))
 	tw.tween_callback(func():
 		muzzle_flash.enabled = false
+		etoile_de_bouche.enabled = false
 		if is_instance_valid(eclat):
 			eclat.visible = false)
 	
@@ -2857,34 +2895,12 @@ func trigger_shoot_visuals():
 		pool.emit(ParticlePool.Kind.SMOKE, muzzle.global_position + canon * 6.0,
 			Color(Charte.ACIER * 0.6, 0.28), 3, 20.0, 55.0, canon, 70.0)
 
-	# V4.14 — le sol répond au coup de feu : bref décal lumineux sous le tireur,
-	# décor seulement (masque 1), sans ombre — le muzzle flash garde le premier
-	# rôle, ceci n'est que son écho au sol.
-	#
-	# Refonte roman graphique, lot 2 (2026-09-11) : il faisait 200 px à 1,2
-	# d'énergie, trois fois l'empreinte de l'éclat dessiné (96 px) et deux fois
-	# celle de la lumière de bouche (64 px) — à l'écran, un disque ambre saturé
-	# qui couvrait l'éclat d'encre posé au lot 1 (constaté au plan `flash-de-tir`
-	# du photographe : le « flash » visible était cet écho). Ramené à 130 px et
-	# 0,7 : l'éclat se lit, le sol répond encore. `test_lumieres` tient toujours
-	# le masque (`ECLAT`, encré à trois paliers) ; seuls empreinte et énergie
-	# changent — la pénalité d'éblouissement ne lit pas cette lumière.
-	var ground_flash := PointLight2D.new()
-	LightTextures.poser(ground_flash, LightTextures.ECLAT, ECHO_AU_SOL_EMPREINTE)
-	ground_flash.color = Charte.AMBRE
-	ground_flash.energy = ECHO_AU_SOL_ENERGIE
-	# OMBRES, O10 (2026-10-04) — il était « sans ombre » : collé à un mur, l'écho éclairait le sol DE L'AUTRE CÔTÉ, sur 65 px, et
-	# disait à travers la pierre qu'on venait de tirer. Les murs le coupent désormais, par le masque des lumières neutres
-	# (`CanauxLumiere.masque_ombre_neutre_pour_les_corps`) : il n'éclaire toujours que le décor (portée 1), aucun corps n'y fait
-	# d'ombre. Une ombre de 0,12 s par tir.
-	ground_flash.shadow_enabled = true
-	ground_flash.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
-	ground_flash.shadow_item_cull_mask = CanauxLumiere.masque_ombre_neutre_pour_les_corps()
-	ground_flash.range_item_cull_mask = 1
-	add_child(ground_flash)
-	var tw_g := create_tween()
-	tw_g.tween_property(ground_flash, "energy", 0.0, 0.12)
-	tw_g.tween_callback(ground_flash.queue_free)
+	# V4.14 — l'écho au sol du tir (`ground_flash`, 130 px) est RETIRÉ (chantier TIR, étape B, 2026-10-05). Il imitait un
+	# flash qui éclaire ; le flash éclaire désormais lui-même, avec ses ombres. Une lumière de moins par tir — c'était la
+	# seule que chaque coup CRÉAIT : la lumière de bouche, elle, existe une fois par joueur.
+	# ⚠️ La règle d'OMBRES O10 (2026-10-04) qu'il portait en dernier — « collé à un mur, l'écho éclairait le sol DE
+	# L'AUTRE CÔTÉ et disait à travers la pierre qu'on venait de tirer » — reste tenue : le grand flash et l'étoile de
+	# bouche sont ombrés par les murs (`tools/test_ombres_regles.gd`, O10, le vérifie désormais sur eux).
 
 ## Où brûle la lampe, dans le repère du joueur (x vers la visée, y à sa droite), en unités de monde : **la lentille
 ## de la torche que tient le modèle 3D** (chantier des lumières de la 0.8.0, L2 — Adrien, 2026-09-29 : « il faudrait
@@ -2914,15 +2930,23 @@ const FLASH_AVANCEE := 28.0
 ## Ce qu'on laisse entre la lampe et le mur qui l'arrête, en unités de monde.
 const RETRAIT_LAMPE := 3.0
 
-## L'écho au sol du tir (V4.14) : son empreinte et son énergie, en retrait de
-## l'éclat dessiné (lot 2 de la refonte, 2026-09-11 — voir `trigger_shoot_visuals`).
-const ECHO_AU_SOL_EMPREINTE := 130.0
-const ECHO_AU_SOL_ENERGIE := 0.7
+## Le pic d'énergie du flash de bouche, multiplié par `muzzle_flash_intensity` de l'arme (chantier TIR, étape B). Il
+## descend en `(1 − k)²` sur la durée de l'arme : à 0,1 s et 60 Hz, 69 % puis 44 % aux deux premières images, la queue
+## ensuite. 1,8 est l'énergie de la maquette validée le 2026-10-05 ; le jeu la pose sur un masque en paliers (`ECLAT`),
+## pas sur le dégradé de la maquette — c'est le réglage à rejuger à l'écran.
+const PIC_DU_FLASH := 1.8
 
-## Empreinte de l'éclat de bouche dessiné, en unités de monde. Plus large que
-## la lumière de bouche (64) parce qu'il doit se LIRE comme une forme, et plus
-## étroit que l'écho au sol (200) pour ne pas le remplacer.
-const EMPREINTE_ECLAT_DESSINE := 96.0
+## Empreinte de l'éclat de bouche dessiné, en unités de monde. Elle valait 96 px, réglée pour ne pas couvrir l'écho
+## au sol de 130 px ; l'écho retiré (chantier TIR, étape B), l'éclat grandit à 120 px. Il reste la FORME du coup, la
+## lumière de bouche en est la PORTÉE.
+const EMPREINTE_ECLAT_DESSINE := 120.0
+
+## Le flash de bouche à `k` de sa durée (0 : le coup part, 1 : éteint) : énergie `pic × (1 − k)²`, teinte halogène au
+## coup, ambre dès 40 % de la durée — un éclair blanc qui retombe en feu.
+func _poser_le_flash(k: float, pic: float) -> void:
+	var reste := 1.0 - clampf(k, 0.0, 1.0)
+	muzzle_flash.energy = pic * reste * reste
+	muzzle_flash.color = Charte.HALOGENE.lerp(Charte.AMBRE, clampf(k / 0.4, 0.0, 1.0))
 
 ## Le sprite de l'éclat de bouche — créé une fois, réutilisé à chaque tir.
 ## Enfant de la bouche du canon : il suit la rotation du joueur sans calcul.

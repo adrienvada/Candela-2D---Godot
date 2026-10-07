@@ -31,11 +31,17 @@ const ECLAT := "res://assets/halo/eclat_poudre.png"
 ##
 ## Plus concentré qu'un halo de corps : c'est la lumière qu'une balle emporte
 ## avec elle, étirée en traînée par `bullet.gd` via `light.scale`.
+##
+## ⚠️ **Plus lue par aucun fichier du jeu depuis le chantier TIR (2026-10-05)** :
+## c'était le « gros rond » de l'aura, remplacé par l'aiguille
+## (`assets/decals/aiguille.png`). Le fichier reste au dépôt, pour un retour arrière.
 const TRAINEE := "res://assets/halo/trainee.png"
 const EMPREINTE_TRAINEE := 128.0
 
 ## Les trois images du flash de bouche, dans l'ordre du temps : amorce,
-## épanouissement, dissipation. Voir `player.gd::trigger_shoot_visuals`.
+## épanouissement, dissipation. Voir `player.gd::trigger_shoot_visuals`. Depuis
+## le chantier TIR (étape B, 2026-10-05), elles vivent sur l'éclat DESSINÉ et sur
+## l'étoile de bouche (`EMPREINTE_ETOILE`) ; le grand flash porte `ECLAT`.
 const FLASH := [
 	"res://assets/flash/flash_1.png",
 	"res://assets/flash/flash_2.png",
@@ -47,9 +53,14 @@ const FLASH := [
 ## qu'un chemin sans son empreinte est un piège : voir `poser()`.
 const EMPREINTE_RETRODIFFUSION := 256.0
 const EMPREINTE_AMBIANTE := 150.0
-## 128² à `texture_scale` 0,5 dans l'ancien code. Les frames sont cuites en 256²,
-## donc quatre fois plus de texels sur le même terrain.
-const EMPREINTE_FLASH := 64.0
+## La lumière de bouche, masque `ECLAT` : 800 px, soit le rayon de 400 px qu'Adrien
+## a choisi sur la maquette du 2026-10-05 (chantier TIR, étape B). Elle valait 64 px,
+## six fois moins que la lumière de coup (400) : le flash n'éclairait que le canon.
+const EMPREINTE_FLASH := 800.0
+## L'étoile de bouche : la lumière de bouche d'avant le chantier TIR, à son empreinte
+## d'alors. 128² à `texture_scale` 0,5 dans l'ancien code ; les images sont cuites en
+## 256², donc quatre fois plus de texels sur le même terrain.
+const EMPREINTE_ETOILE := 64.0
 
 static var _masques: Dictionary = {}
 

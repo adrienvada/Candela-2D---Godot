@@ -41,7 +41,8 @@ const ATTENDUS := [
 ## Les lumières dont l'échelle passe obligatoirement par `poser()`. La torche est
 ## absente **et c'est voulu** : son échelle vient de `WeaponData.echelle_torche()`,
 ## garantie par `test_torches.gd`. Deux chemins, deux gardiens, aucun trou.
-const PEINTES := ["body_light", "ambient_light", "muzzle_flash", "ground_flash", "hit_light"]
+## (`ground_flash`, l'écho au sol du tir, a quitté la liste avec le jeu : chantier TIR, étape B, 2026-10-05.)
+const PEINTES := ["body_light", "ambient_light", "muzzle_flash", "etoile_de_bouche", "hit_light"]
 
 var _echecs := 0
 var _total := 0

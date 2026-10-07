@@ -62,6 +62,69 @@ var spawn_pos: Vector2
 var _fumee_traversee: Fusee = null
 var _fumee_entree: Vector2 = Vector2.ZERO
 
+## ── Chantier TIR, étape A (2026-10-05) : l'aiguille et le sillage ───────────
+##
+## Adrien, 2026-10-05 : « Je n'aime pas le rendu des balles. Cela fait un gros rond, lumineux, inélégant. » Puis :
+## « Elle doit être plus subtile aussi. » Les valeurs ci-dessous sont celles qu'il a choisies sur la maquette
+## comparative le même jour (persistance 28 ms, sillage 48 %, la balle reste sans lumière).
+##
+## **Le rond, c'était l'`Aura`** : un disque peint de 192 px centré sur une balle de 4 px de rayon, la forme la plus
+## grande et la plus claire du tir. Et la balle avance de 167 à 267 px par pas de physique (60 Hz, sans interpolation) :
+## le disque était tamponné à trois ou quatre endroits, en perles.
+##
+## L'`Aura` est désormais l'AIGUILLE : la planche `aiguille.png` étirée DERRIÈRE la tête, sur `vitesse × PERSISTANCE`.
+## ⚠️ **Cette longueur couvre un pas de physique entier**, et c'est ce qui fait filer la balle au lieu de sauter : à
+## toute cadence d'affichage, l'aiguille d'un pas rejoint celle du suivant. Elle dit aussi l'arme : 336 px au pistolet,
+## 420 au fusil, 448 à la Sentinelle, 168 à l'Incendiaire.
+##
+## La `Core` est le SILLAGE : la même géométrie que la traçante d'avant (ancrée au départ, 800 px au plus, même
+## extinction de 80 ms), en fil de 1,5 px à 48 %. La direction du tir reste lisible ; elle ne crie plus.
+const PERSISTANCE := 0.028
+const SILLAGE_OPACITE := 0.48
+const LARGEUR_SILLAGE := 1.5
+## La traçante d'avant, dont le sillage garde la géométrie.
+const SILLAGE_MAX := 800.0
+## La planche de l'aiguille et ce que couvre sa hauteur dans le monde (`tools/fabrique_aiguille.gd`, `HAUTEUR_MONDE`). Son jumeau
+## FONDU (`assets/fondu/`) est celui du jeu, le masque encré celui de `--sans-fondu` : `IsoMateriaux.masque_d_effet` choisit (RR5).
+const CHEMIN_AIGUILLE := "res://assets/decals/aiguille.png"
+const HAUTEUR_AIGUILLE := 10.0
+## À l'impact, l'aiguille s'ENFONCE dans le point touché au lieu de s'éteindre sur place : la lumière converge là où
+## partent les étincelles et le son. Trois images à 60 Hz.
+const DUREE_RETRACTION := 0.048
+## Le fil du tir fatal : tout le sillage s'allume à blanc puis refroidit (`Charte.feu`) en `LETHAL_FADE_DURATION`.
+const LARGEUR_FIL := 2.0
+const OPACITE_FIL := 0.9
+
+## La longueur de l'aiguille posée à cet instant, en pixels de monde.
+var _aiguille := 0.0
+## Faux pour une arme sans lumière : son aiguille reste cachée, quoi qu'on pose.
+var _aiguille_permise := true
+
+## Pose l'aiguille sur `longueur` px derrière la tête.
+##
+## ⚠️ **Par `position`, jamais par `offset`.** Le miroir iso lit la position globale, la rotation et l'échelle du
+## sprite (`MiroirsIso._poser_rect`) ; un `offset` y serait perdu, et l'aiguille se poserait centrée sur la tête, à
+## moitié devant la balle.
+##
+## Plus courte que sa longueur pleine — au départ, ou pendant qu'elle s'enfonce —, l'aiguille est COMPRESSÉE et non
+## coupée : la planche entière tient dans `longueur`. Une découpe passerait par `region_rect`, que le miroir iso
+## ignore ; et au départ, cela ne dure qu'un pas.
+func _poser_l_aiguille(longueur: float) -> void:
+	_aiguille = longueur
+	var aura := get_node_or_null(^"Aura") as Sprite2D
+	if aura == null or aura.texture == null:
+		return
+	# Trop courte, on la CACHE au lieu de l'écraser : une échelle nulle rendrait la transformée du nœud non inversible.
+	aura.visible = _aiguille_permise and longueur >= 0.5
+	if not aura.visible:
+		return
+	aura.scale = Vector2(longueur / aura.texture.get_width(), HAUTEUR_AIGUILLE / aura.texture.get_height())
+	aura.position = Vector2(-longueur * 0.5, 0.0)
+
+## La longueur pleine de l'aiguille de cette arme.
+func longueur_d_aiguille() -> float:
+	return weapon.bullet_speed * PERSISTANCE if weapon else 0.0
+
 # Matériau additif non éclairé, identique pour toutes les balles.
 static var _shared_additive: CanvasItemMaterial
 
@@ -80,20 +143,18 @@ func _ready():
 	# Elle portait une `PointLight2D` à ombres (« TrailLight »), étirée jusqu'à 800 px : Godot n'applique
 	# jamais plus de quinze lumières à un même `CanvasItem`, tout ou rien, et une rafale près d'une fusée
 	# coupait son halo (« Pièges connus », « quinze par item »). Conséquence acceptée : une balle qui passe
-	# près d'un corps ne le révèle plus. Ce qui la fait voir dans le noir reste : la traçante (`Core`) et
-	# l'aura (`Aura`), non éclairées et additives.
+	# près d'un corps ne le révèle plus. Ce qui la fait voir dans le noir reste : le sillage (`Core`) et
+	# l'aiguille (`Aura`), non éclairés et additifs. Le 2026-10-05, Adrien l'a confirmé : « balle sans lumière » —
+	# la lumière du tir est celle du canon (`Player.trigger_shoot_visuals`).
 	#
-	# DA2.12 — le halo peint de la traînée, désormais porté par l'aura seule. Texture partagée et mise en
-	# cache par `LightTextures.masque()`.
-	# Chantier RR, RR5 — la traînée et la traçante FONDUES en jeu (`IsoMateriaux.masque_d_effet`) ; encrées sous `--sans-fondu`.
-	var grad_tex := LightTextures.masque(IsoMateriaux.masque_d_effet(LightTextures.TRAINEE))
-
+	# Chantier TIR, étape A (2026-10-05) — la `Core` est le SILLAGE et l'`Aura` l'AIGUILLE : voir `PERSISTANCE`.
+	# Les deux noms sont d'avant et restent : le miroir iso (`miroirs_iso.gd`) cherche ces nœuds PAR LEUR NOM.
+	# Chantier RR, RR5 — la traçante FONDUE en jeu, encrée sous `--sans-fondu` (`IsoMateriaux.masque_d_effet`) ; l'aiguille
+	# suit la même règle (`_masque_aiguille`). La traînée ronde de RR5 (`TRAINEE`) n'a plus d'usage : l'aiguille l'a remplacée.
 	var core = Line2D.new()
 	core.name = "Core"
-	core.width = 5.0
-	# Métal en fusion : la teinte du feu, poussée hors du cube [0, 1] par le
-	# matériau additif — voir `Charte.AMBRE_INCANDESCENT`.
-	core.default_color = Color(Charte.AMBRE_INCANDESCENT, 1.0)
+	core.width = LARGEUR_SILLAGE
+	core.default_color = Color(Charte.AMBRE, SILLAGE_OPACITE)
 	# DA2.12 — la traçante cesse d'être un trait plein.
 	#
 	# ⚠️ **Le sens de la texture n'est pas anodin.** Les points vont de
@@ -110,33 +171,35 @@ func _ready():
 	core.material = mat
 	add_child(core)
 	
-	# Add a glowing aura Sprite2D so the glow is visible even over the darkened killcam overlay
+	# L'aiguille : la planche cuite, étirée derrière la tête par `_poser_l_aiguille()`. Sa couleur est dans la
+	# planche (blanc, ambre, carmin le long du trait) : le `modulate` reste neutre.
 	var aura = Sprite2D.new()
 	aura.name = "Aura"
-	aura.texture = grad_tex # Le dégradé de la traînée (LightTextures.TRAINEE)
-	aura.modulate = Color(Charte.AMBRE, 0.6) # Même teinte que la balle, atténuée
-	aura.material = mat # Reuse the unshaded, additive material (mat is already BLEND_MODE_ADD)
-	aura.scale = Vector2(1.5, 1.5) # Reduced scale to make it less thick
+	aura.texture = LightTextures.masque(IsoMateriaux.masque_d_effet(CHEMIN_AIGUILLE))
+	aura.material = mat # Additif, non éclairé — comme la traçante.
 	add_child(aura)
-	
+
 	if weapon:
 		bounces_left = weapon.max_bounces
-		
-		# Apply custom visual parameters
-		core.default_color = weapon.bullet_color
-		core.width = weapon.bullet_width
-		
-		# `emits_light` ne pilote plus que l'aura et la traçante additive (décision du 2026-09-15) :
+
+		# `emits_light` ne pilote plus que l'aiguille et le sillage additif (décision du 2026-09-15) :
 		# `bullet_light_energy` reste dans les données de classe, et aucune balle n'éclaire plus rien.
 		if not weapon.emits_light:
-			aura.visible = false
+			# L'arme sans lumière garde son carreau d'acier ÉCLAIRÉ, qui ne se voit que dans la lumière d'un
+			# autre : c'est la seule à lire encore `bullet_color` et `bullet_width` (chantier TIR, inchangé).
+			core.default_color = weapon.bullet_color
+			core.width = weapon.bullet_width
+			_aiguille_permise = false
 			core.material = null # Use default shaded material
 		else:
-			# Curseur MONDE « Trait de balle » (plancher 0,5 en classé) : l'aura
+			# Curseur MONDE « Trait de balle » (plancher 0,5 en classé) : l'aiguille
 			# qui dit d'où l'on tire.
 			var trait_balle := EffectPolicy.curseur("trait_de_balle")
 			aura.modulate.a *= trait_balle
-	
+			_opacite_aiguille = aura.modulate.a
+	# Au départ, rien derrière la tête : l'aiguille naît au premier pas.
+	_poser_l_aiguille(0.0)
+
 	# ShapeCast for accurate collision
 	shape_cast = ShapeCast2D.new()
 	var circle = CircleShape2D.new()
@@ -312,6 +375,10 @@ func _physics_process(delta):
 				rotation = direction.angle()
 				global_position = hit_point + normal * (radius + 2.0)
 				spawn_pos = global_position # Reset trail origin
+				# Chantier TIR — les traits repartent du rebond DÈS cette image. Laissés à leur longueur, ils se
+				# dessinaient une image durant le long de la NOUVELLE direction, donc derrière le rebond, à travers le
+				# mur (la traçante d'avant le faisait sur 800 px ; l'aiguille l'aurait fait sur 420).
+				_etirer_les_traits()
 
 				# FU3 — un rebond casse le tunnel en cours au point d'impact et en
 				# rouvre un neuf si l'angle rebondi reste dans la même fumée : sinon
@@ -350,12 +417,14 @@ func _physics_process(delta):
 	if is_replay:
 		queue_redraw()
 
-	# La traçante s'étire derrière la balle.
-	var dist_from_spawn = global_position.distance_to(spawn_pos)
-	var trail_length = min(dist_from_spawn, 800.0)
+	_etirer_les_traits()
 
+## Le sillage et l'aiguille s'étirent derrière la balle, depuis son départ ou son dernier rebond (`spawn_pos`).
+func _etirer_les_traits() -> void:
+	var parcouru := global_position.distance_to(spawn_pos)
 	if has_node("Core"):
-		get_node("Core").points = PackedVector2Array([Vector2.ZERO, Vector2(-trail_length, 0)])
+		get_node("Core").points = PackedVector2Array([Vector2.ZERO, Vector2(-minf(parcouru, SILLAGE_MAX), 0)])
+	_poser_l_aiguille(minf(parcouru, longueur_d_aiguille()))
 
 ## V6.2 — Trajectoire au trait (killcam) : pendant le rejeu, la balle laisse
 ## derrière elle, en pointillé, le segment déjà parcouru. Le tracé est en espace
@@ -584,20 +653,44 @@ static func _circle_entry_distance(origin: Vector2, dir: Vector2, length: float,
 		return -1.0
 	return entry
 
-## V2.6 — Le trait du tir fatal sur-expose : largeur triplée, aura pleine,
-## fondu ralenti pour que le gel de l'instant fatal (V2.1) fige une image
-## incandescente. L'arbalète, sans aura par design, ne gagne que la largeur.
+## V2.6 — Le tir fatal se fige incandescent, pour que le gel de l'instant fatal (V2.1) montre une image qui brûle.
+##
+## Chantier TIR, étape A (2026-10-05) : ce n'est plus une traçante triplée en largeur, c'est le FIL. Tout le sillage
+## s'allume à blanc et l'aiguille reste plantée dans la victime, puis les deux refroidissent ensemble le long de
+## `Charte.feu()` en `LETHAL_FADE_DURATION` : blanc, ambre, carmin, noir. L'arbalète, sans aiguille, garde le geste
+## d'avant : son carreau d'acier triple de largeur.
 ## (Son énergie de lumière triplée a disparu avec la lumière, 2026-09-15.)
 const LETHAL_FADE_DURATION := 0.35
 var _fade_duration := 0.08
+var _fatal := false
 
 func _flare_trail() -> void:
 	_fade_duration = LETHAL_FADE_DURATION
-	if has_node("Core"):
-		var core: Line2D = get_node("Core")
+	_fatal = true
+	var core := get_node_or_null(^"Core") as Line2D
+	if core == null:
+		return
+	if not _aiguille_permise:
 		core.width *= 3.0
-	if has_node("Aura") and get_node("Aura").visible:
-		get_node("Aura").modulate.a = 1.0
+		return
+	core.width = LARGEUR_FIL
+	# Un facteur NEUTRE, pas une couleur : la teinte du fil est celle de `modulate`, posée par `_refroidir()`.
+	core.default_color = Color(1.0, 1.0, 1.0, OPACITE_FIL)
+	_refroidir(0.0)
+
+## Le fil et l'aiguille du tir fatal, à `t` de leur refroidissement (0 : blancs, 1 : éteints).
+func _refroidir(t: float) -> void:
+	var chaleur := 1.0 - clampf(t, 0.0, 1.0)
+	var opacite := clampf(chaleur * 1.4, 0.0, 1.0)
+	var core := get_node_or_null(^"Core") as CanvasItem
+	if core != null:
+		core.modulate = Color(Charte.feu(chaleur), opacite)
+	var aura := get_node_or_null(^"Aura") as CanvasItem
+	if aura != null:
+		aura.modulate = Color(Charte.feu(chaleur), opacite * _opacite_aiguille)
+
+## L'opacité de l'aiguille au moment du tir (le curseur « Trait de balle »), que le refroidissement multiplie.
+var _opacite_aiguille := 1.0
 
 func _fade_and_destroy(hit_point: Vector2):
 	# FU3 — ferme tout tunnel en cours au point de mort EXACT, quelle que soit
@@ -606,17 +699,17 @@ func _fade_and_destroy(hit_point: Vector2):
 	if not is_replay:
 		_maj_tunnel(hit_point)
 	set_physics_process(false)
-	var final_step = hit_point - global_position
-	var dist = final_step.length()
-	
-	# Keep the trail length that was built up, properly bounded
-	var dist_from_spawn = hit_point.distance_to(spawn_pos)
-	var trail_length = min(dist_from_spawn, 800.0)
+	# La tête se pose au point de mort ; sillage et aiguille gardent ce qu'ils avaient parcouru.
 	global_position = hit_point
+	_etirer_les_traits()
 
-	if has_node("Core"):
-		get_node("Core").points = PackedVector2Array([Vector2.ZERO, Vector2(-trail_length, 0)])
-	
+	var tween = create_tween().set_parallel(true)
+	if _fatal and _aiguille_permise:
+		# Le fil : tout refroidit d'un même geste, EXTINCTION (voir plus bas).
+		Charte.animer_via(tween, _refroidir, 0.0, 1.0, _fade_duration, Charte.Courbe.EXTINCTION)
+		tween.chain().tween_callback(queue_free)
+		return
+
 	# DA4.13 — la balle s'éteint : EXTINCTION, et surtout PAS `SORTIE`.
 	#
 	# ⚠️ **`SORTIE` veut dire « un élément quitte l'interface » — il part quelque
@@ -627,18 +720,18 @@ func _fade_and_destroy(hit_point: Vector2):
 	#
 	# ⚠️ **Le départ est figé à l'appel, pas lu au démarrage du tweener.**
 	# `Charte.animer()` prend la valeur de départ en paramètre ; `tween_property`
-	# la lisait au moment où le tweener démarre. Ici les trois partent ensemble et
+	# la lisait au moment où le tweener démarre. Ici les tweeners partent ensemble et
 	# rien ne repeint entre-temps, donc les deux se valent — mais la différence a
 	# déjà éteint un effet en silence le 2026-08-26, et elle mérite d'être lue.
-	var tween = create_tween().set_parallel(true)
 	if has_node("Core"):
 		var noyau := get_node("Core") as CanvasItem
 		Charte.animer(tween, noyau, "modulate:a", noyau.modulate.a, 0.0,
 			_fade_duration, Charte.Courbe.EXTINCTION)
-	if has_node("Aura"):
-		var aura := get_node("Aura") as CanvasItem
-		Charte.animer(tween, aura, "modulate:a", aura.modulate.a, 0.0,
-			_fade_duration, Charte.Courbe.EXTINCTION)
+	# Chantier TIR — l'aiguille, elle, ne s'éteint pas : elle s'ENFONCE dans le point touché, et c'est bien `SORTIE`
+	# cette fois. Elle ne décroît pas, elle PART quelque part — dans l'impact : elle s'attarde puis file, comme la
+	# queue d'un trait qui rattrape sa tête arrêtée.
+	if _aiguille > 0.0:
+		Charte.animer_via(tween, _poser_l_aiguille, _aiguille, 0.0, DUREE_RETRACTION, Charte.Courbe.SORTIE)
 	tween.chain().tween_callback(queue_free)
 
 ## Le pool est créé par GameState ; sans lui (tests headless isolés) les impacts
