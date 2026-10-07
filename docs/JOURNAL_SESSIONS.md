@@ -6161,6 +6161,10 @@ de `tools/test_rendu_rr.gd` (touché) lisait la traînée ronde, retirée : elle
 prochaine fusion, `grep etoile_de_bouche player.gd` et `grep _poser_le_flash player.gd`. Le grand flash porte `ECLAT` : il
 n'ajoute aucune texture à l'atlas.
 
+**Fusion dans `main` (2026-10-07)** : sur le « Fusionne » d'Adrien, la PR #10 entre dans `main` par un commit de fusion,
+CI verte sur sa tête `d949244`. Rien de plus n'est touché : la ROADMAP inscrit la décision, le chantier attend le jugement
+en jeu (TIR-1 à TIR-3 du suivi).
+
 ## 2026-10-05 — L'audit d'optimisation (session « Audit d'optimisation du jeu », `candela-2d-godot-86`, branche `ccr-7f4baeb9-fzg310`)
 
 Demande d'Adrien du 2026-10-04 : « Délègue à des sous-agents Sonnet 5.5 chaque tâche. Fais un audit complet d'optimisation
